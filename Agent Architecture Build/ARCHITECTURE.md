@@ -1,4 +1,4 @@
-# CasAI Provenance Lab — MVP Architecture & Agent Coordination Spec
+# DNA with a Twist — Provenance Lab — MVP Architecture & Agent Coordination Spec
 
 **Status:** Source of truth. Every agent (Frontend, Backend, Review) reads this before any work.
 **Scope:** Layers 1–2 production-grade. Layers 3–5 stubbed but wired end-to-end so the demo loop closes.
@@ -26,7 +26,7 @@
 ## 2. Repo Layout (file ownership is enforced)
 
 ```
-casai/
+dna-with-a-twist/
 ├── apps/
 │   ├── web/                    ← FRONTEND AGENT owns
 │   │   ├── app/                  ← Next.js routes
@@ -283,7 +283,7 @@ Rules:
 5. Enter prompt: *"Disrupt GATA1 binding site at +58 enhancer"*
 6. Click "Run" → event log streams: preflight → extract → simulate ×N → score ×N → summary
 7. Prediction view: top 5 guides ranked by on-target score, with off-target counts
-8. Click "Export Pack" → download `casai_run_<id>.zip`, verify SHA matches displayed hash
+8. Click "Export Pack" → download `dnatwist_run_<id>.zip`, verify SHA matches displayed hash
 9. Click "Replay" → identical prediction hash. Determinism badge turns green.
 
 This is the 3-minute demo that proves the thesis.
