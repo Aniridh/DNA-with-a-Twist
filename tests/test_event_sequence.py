@@ -366,25 +366,30 @@ class TestEventSequence:
         self, run_events: tuple[str, list[dict[str, Any]]]
     ) -> None:
         """
-        Only event types defined in §5 should appear in a normal run.
-        Unknown types may indicate a bug in the event emitter or a schema change
-        that wasn't reflected in ARCHITECTURE.md.
+        Only event types defined in §5 may appear in a run.
+        The §5 vocabulary is fixed by contract (ARCHITECTURE.md).
 
-        This test warns but does not fail — new event types may be added in later
-        sprints. Update REQUIRED_EVENT_TYPES_ORDERED when §5 is extended.
+        HARD FAILURE on unknown types — not a warning. The contract is either
+        enforced or it isn't. If backend needs a new event type (e.g. SSE
+        keepalive heartbeat), the correct path is:
+          1. Open an ARCHITECTURE.md PR adding the type to §5 vocabulary.
+          2. Update REQUIRED_EVENT_TYPES_ORDERED in this file in the same PR.
+          3. Open the emission PR against the updated contract.
+
+        Coordinator overrides if a test is too strict; that creates an audit
+        trail. Silent warnings do not.
         """
         run_id, events = run_events
         known_types = set(REQUIRED_EVENT_TYPES_ORDERED)
         emitted = {e["event_type"] for e in events}
         unknown = emitted - known_types
-        if unknown:
-            import warnings
-            warnings.warn(
-                f"Run {run_id} emitted event types not listed in ARCHITECTURE.md §5: "
-                f"{unknown}. If these are intentional, update §5 and add them to "
-                "REQUIRED_EVENT_TYPES_ORDERED in this test.",
-                stacklevel=1,
-            )
+        assert not unknown, (
+            f"Run {run_id} emitted event types not listed in ARCHITECTURE.md §5: "
+            f"{sorted(unknown)}. "
+            "Adding event types requires an ARCHITECTURE.md PR to §5 first, "
+            "followed by updating REQUIRED_EVENT_TYPES_ORDERED in this file. "
+            "Do not add event types silently — contract drift is how audit trails rot."
+        )
 
     # ── Count-based sanity checks ──────────────────────────────────────────────
 
