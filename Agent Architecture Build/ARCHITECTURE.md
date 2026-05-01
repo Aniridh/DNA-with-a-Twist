@@ -88,6 +88,7 @@ class ResearchObject(BaseModel):
     target_pdb_ref: StorageRef | None
     target_pdb_sha256: str | None
     fastq_ref: StorageRef | None
+    fastq_sha256: str | None             # SHA-256 of raw FASTQ; in content_hash allowlist
     fastq_phred_pass_pct: float | None   # % bases >= Q20
     pam: Literal["NGG"] = "NGG"          # SpCas9 only for MVP
     metadata: dict[str, str]
