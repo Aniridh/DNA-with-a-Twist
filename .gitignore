@@ -1,0 +1,34 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets — NEVER commit these
+.env
+.env.local
+.env.*.local
+*.pem
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.env/
+
+# Next.js
+apps/web/.next/
+apps/web/out/
+
+# Build outputs
+dist/
+build/
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+apps/web/next-env.d.ts
