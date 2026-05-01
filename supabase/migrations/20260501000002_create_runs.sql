@@ -2,15 +2,14 @@
 -- A Run ties a ResearchObject to a natural-language prompt and tracks
 -- the pipeline execution through its BackgroundTask lifecycle.
 --
--- NOTE: ro_id intentionally has no FK constraint to research_objects.
--- The reviewer's test_provenance_append_only.py fixture inserts runs with
--- stub ro_ids (random UUIDs) to isolate the append-only test from RO setup.
--- Referential integrity is enforced at the application layer (L1 ingestion).
--- TODO: promote to FK once test fixtures seed proper ResearchObject rows.
+-- ro_id is a hard FK to research_objects. An orphan run (no RO) cannot be
+-- replayed, exported, or verified — it has no provenance. The FK enforces
+-- this invariant at the DB layer. The reviewer's append-only test fixture
+-- inserts a stub research_objects row before inserting the run.
 
 CREATE TABLE IF NOT EXISTS runs (
     id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    ro_id       UUID        NOT NULL,   -- references research_objects(id); app-enforced
+    ro_id       UUID        NOT NULL REFERENCES research_objects(id),
     prompt      TEXT        NOT NULL,
     status      TEXT        NOT NULL DEFAULT 'queued'
                     CHECK (status IN ('queued', 'running', 'done', 'failed')),
