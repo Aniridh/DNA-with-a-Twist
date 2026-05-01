@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=70"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dna-with-a-twist-api"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    # Web framework
+    "fastapi>=0.111.0,<0.112",
+    "uvicorn[standard]>=0.30.0,<0.31",
+    "python-multipart>=0.0.9,<0.0.10",
+    # Data / validation
+    "pydantic>=2.7.0,<3",
+    # Bioinformatics
+    "biopython>=1.83,<2",
+    # Supabase
+    "supabase>=2.4.0,<3",
+    # SSE streaming
+    "sse-starlette>=2.1.0,<3",
+    # HTTP client (RCSB fetch, test helpers)
+    "httpx>=0.27.0,<0.28",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2.0",
+    "pytest-asyncio>=0.23.0",
+    "ruff>=0.4.4",
+    "mypy>=1.10.0",
+    "pydantic[mypy]>=2.7.0",
+]
+
+# ---------------------------------------------------------------------------
+# Scoring — azimuth recon outcome (Ruling E, 2026-04-30)
+# ---------------------------------------------------------------------------
+# azimuth requires scikit-learn<=0.18 and numpy<1.24 — incompatible with
+# Python 3.11 ecosystem. Decision: port RS2 weights directly into
+# scoring/doench_rs2_weights.py as a frozen constant module with explicit
+# float32 casting. Expose __weights_sha256__ for run manifest recording.
+# Reviewer adds test_doench_rs2_reference.py (~10 Doench 2016 reference
+# values) to catch numeric drift in the port. Ships in PR #3.
+#
+# env_fingerprint = sha256(uv.lock) — computed at run time in the manifest.
+# Generate/update with: uv lock (from apps/api/).
+# ---------------------------------------------------------------------------
+
+[tool.setuptools]
+py-modules = ["canonical"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pipeline*", "scoring*", "routers*", "models*"]
