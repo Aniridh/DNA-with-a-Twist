@@ -139,3 +139,13 @@
 .animate-live-blink {
   animation: live-blink 1.4s ease-in-out infinite;
 }
+
+@keyframes hash-reveal {
+  0%   { opacity: 0; transform: scale(0.94) translateY(8px); }
+  60%  { opacity: 1; transform: scale(1.02) translateY(-2px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.animate-hash-reveal {
+  animation: hash-reveal 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
