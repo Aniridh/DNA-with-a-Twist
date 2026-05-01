@@ -84,9 +84,10 @@ export type UploadResponse = {
 };
 
 export type CreateRORequest = {
-  backbone_id: string;
-  fastq_id?: string;
-  pdb_id?: string;
+  backbone_upload_id: string;
+  fastq_upload_id?: string;
+  pdb_upload_id?: string;
+  pam?: "NGG";
   metadata: Record<string, string>;
 };
 

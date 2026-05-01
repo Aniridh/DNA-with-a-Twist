@@ -10,14 +10,23 @@ import type {
   Run,
   UploadResponse,
 } from "./types";
+import { createClient } from "./supabase";
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
+async function getAuthToken(): Promise<string> {
+  const { data } = await createClient().auth.getSession();
+  if (!data.session?.access_token) throw new Error("Not authenticated");
+  return data.session.access_token;
+}
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = await getAuthToken();
   const res = await fetch(`${BASE}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
       ...init?.headers,
     },
   });
@@ -30,9 +39,14 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const realApiClient: ApiClient = {
   async uploadFile(file: File): Promise<UploadResponse> {
+    const token = await getAuthToken();
     const form = new FormData();
     form.append("file", file);
-    const res = await fetch(`${BASE}/api/v1/uploads`, { method: "POST", body: form });
+    const res = await fetch(`${BASE}/api/v1/uploads`, {
+      method: "POST",
+      body: form,
+      headers: { Authorization: `Bearer ${token}` },
+    });
     if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
     return res.json() as Promise<UploadResponse>;
   },

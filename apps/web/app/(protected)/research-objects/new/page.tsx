@@ -306,9 +306,9 @@ export default function NewResearchObjectPage() {
         wizard.metadata.filter((p) => p.key.trim()).map((p) => [p.key.trim(), p.value.trim()])
       );
       const ro = await apiClient.createResearchObject({
-        backbone_id: wizard.backbone.file_id,
-        fastq_id: wizard.fastq?.file_id,
-        pdb_id: wizard.pdb?.file_id,
+        backbone_upload_id: wizard.backbone.file_id,
+        fastq_upload_id: wizard.fastq?.file_id,
+        pdb_upload_id: wizard.pdb?.file_id,
         metadata,
       });
       setCreatedRO(ro);
