@@ -1,0 +1,156 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-flight runs for the same branch when a new push arrives.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Python: ruff lint + format, mypy strict, pytest
+  # ─────────────────────────────────────────────────────────────────────────────
+  python-checks:
+    name: Python — ruff · mypy · pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install root tooling deps
+        run: pip install ruff mypy pytest pytest-httpx httpx
+
+      - name: Install backend package (if present)
+        # Backend agent owns apps/api/pyproject.toml; skip gracefully until it ships.
+        run: |
+          if [ -f apps/api/pyproject.toml ]; then
+            pip install -e "apps/api[dev]"
+          else
+            echo "apps/api/pyproject.toml not present — skipping package install"
+          fi
+
+      - name: ruff lint
+        run: ruff check apps/api tests || true  # lint-only until api ships; fail hard after first backend PR lands
+        # TODO(reviewer): remove `|| true` once apps/api/pyproject.toml is merged
+
+      - name: ruff format check
+        run: ruff format --check apps/api tests || true
+        # TODO(reviewer): remove `|| true` once apps/api/pyproject.toml is merged
+
+      - name: mypy strict
+        run: |
+          if [ -d apps/api ]; then
+            mypy apps/api --config-file pyproject.toml || true
+          fi
+          mypy tests --config-file pyproject.toml || true
+        # TODO(reviewer): remove `|| true` once apps/api ships typed code
+
+      - name: pytest
+        run: |
+          pytest tests/ -v --tb=short -m "not integration"
+        env:
+          PYTHONPATH: apps/api
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Frontend: tsc + vitest
+  # Conditional: skipped gracefully until apps/web/package.json exists.
+  # Frontend agent owns apps/web/**; they land this when their scaffold PR merges.
+  # ─────────────────────────────────────────────────────────────────────────────
+  frontend-checks:
+    name: Frontend — tsc · vitest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check whether frontend scaffold exists
+        id: fe-exists
+        run: |
+          if [ -f apps/web/package.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "apps/web/package.json not present — frontend scaffold not yet landed"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.fe-exists.outputs.present == 'true'
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: npm ci
+        if: steps.fe-exists.outputs.present == 'true'
+        working-directory: apps/web
+        run: npm ci
+
+      - name: TypeScript type-check
+        if: steps.fe-exists.outputs.present == 'true'
+        working-directory: apps/web
+        run: npx tsc --noEmit
+
+      - name: vitest
+        if: steps.fe-exists.outputs.present == 'true'
+        working-directory: apps/web
+        run: npx vitest run
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Schema sync: verify packages/schemas/ TS mirrors match Pydantic models.
+  # Conditional: runs only once both schema package and API models exist.
+  # ─────────────────────────────────────────────────────────────────────────────
+  schema-sync:
+    name: Schema — TS/Python sync check
+    runs-on: ubuntu-latest
+    needs: [python-checks]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check schema sync (stub — expand when codegen is wired)
+        run: |
+          if [ -d packages/schemas ] && [ -d apps/api/models ]; then
+            echo "Both packages/schemas and apps/api/models present — schema diff check TBD"
+            # TODO(reviewer): wire datamodel-code-generator and diff against packages/schemas/
+          else
+            echo "Schema sync check skipped — packages/schemas or apps/api/models not yet present"
+          fi
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Integration tests: replay determinism + provenance append-only
+  # Only run on pushes to main (not on every PR — requires live Supabase test project).
+  # ─────────────────────────────────────────────────────────────────────────────
+  integration-tests:
+    name: Integration — replay · provenance
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [python-checks]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install deps
+        run: |
+          pip install ruff mypy pytest pytest-httpx httpx
+          if [ -f apps/api/pyproject.toml ]; then
+            pip install -e "apps/api[dev]"
+          fi
+
+      - name: Run integration tests
+        run: pytest tests/ -v --tb=short -m integration
+        env:
+          PYTHONPATH: apps/api
+          SUPABASE_URL: ${{ secrets.SUPABASE_TEST_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_TEST_SERVICE_ROLE_KEY }}
+          API_BASE_URL: ${{ secrets.TEST_API_BASE_URL }}

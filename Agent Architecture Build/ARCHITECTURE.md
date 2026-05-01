@@ -73,6 +73,10 @@ dna-with-a-twist/
 
 **Ownership rule:** Frontend agent never edits `apps/api/**` or `supabase/**`. Backend agent never edits `apps/web/**`. Both read `packages/schemas/**`. Review agent owns `tests/**` and gates merges to `main`.
 
+**Sample data:** Lives in `tests/fixtures/` (Review agent owns). Backend agent must not create `apps/api/sample_data/` — if it exists, delete it and move files to `tests/fixtures/`.
+
+**Merge authority:** Review agent approves PRs. Coordinator merges to `main`. No agent merges its own PR. No agent approves another agent's PR without Review agent sign-off.
+
 ---
 
 ## 3. Data Models (the contract)
@@ -179,11 +183,11 @@ Reviewer enforces: ≥5 events per successful run, monotonic `seq`, append-only.
 This is what makes "Provenance Lab" credible. **Two separate runs with the same RO and same prompt MUST produce byte-identical `prediction.json`.** The replay button proves it.
 
 Rules:
-1. `apps/api/canonical.py` is the single canonicalization point. Sorts keys, formats timestamps as ISO-8601 UTC with `Z`, no whitespace, UTF-8.
-2. RO `content_hash = sha256(canonical_json(ro_fields_excluding_hash_and_id))`.
-3. Scoring functions are pure: `score(sequence, params) → float`, no time, no randomness, no I/O.
+1. `apps/api/canonical.py` is the single canonicalization point. Sorts keys, formats timestamps as ISO-8601 UTC with `Z`, no whitespace, UTF-8, NFC-normalized Unicode.
+2. RO `content_hash = sha256(canonical_json(bundle))` where `bundle` is **exactly** `{backbone_sha256, target_pdb_sha256, fastq_sha256, pam, metadata}` — no other fields. Any PR that adds a field to the hashed bundle requires an architecture PR to this doc first. Reviewer enforces.
+3. Scoring functions are pure: `score(sequence, params) → float`, no time, no randomness, no I/O. `datetime.now()`, `random.*`, and unseeded `uuid4()` are rejected **only when they appear inside hashed payloads or canonicalization paths** — they are permitted in non-hashed paths (e.g., signed URL generation, run ID creation).
 4. Run timestamps go in the manifest, **not** in the prediction. The prediction itself is timestamp-free so its hash is stable.
-5. Export pack content hash is stable across replays (test enforces this).
+5. Replay-stability applies to **`prediction.json` and `research_object.json` only**. `manifest.json` and `events.jsonl` legitimately differ between runs (they contain run UUIDs and timestamps). `test_replay.py` asserts byte-equality on those two files only, not on the zip overall.
 
 ---
 
@@ -309,10 +313,10 @@ This is the 3-minute demo that proves the thesis.
 6. Compare/replay view
 
 **Review agent (continuous)**
-1. Set up CI: ruff, mypy strict, pytest, vitest
+1. **[BLOCKING — must land before backend PR #1 opens]** Set up CI: ruff, mypy strict, pytest, vitest. Branch protection on `main` requiring CI pass. Coordinator enforces this sequence.
 2. Write `test_canonical_hash.py` and `test_replay.py` first — these gate everything
 3. PR review against checklist in §9
-4. Owns README + sample data + deploy runbook
+4. Owns README + sample data (`tests/fixtures/`) + deploy runbook
 
 ---
 

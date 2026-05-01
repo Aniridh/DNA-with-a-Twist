@@ -1,0 +1,52 @@
+# Root-level tooling configuration (ruff, mypy, pytest).
+# Backend package declaration lives in apps/api/pyproject.toml (Backend agent owns).
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["apps/api", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "ANN"]
+ignore = [
+    "ANN101",  # missing self type annotation
+    "ANN102",  # missing cls type annotation
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ANN"]  # don't require type annotations in test files
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+plugins = ["pydantic.mypy"]
+exclude = ["apps/web", "packages/schemas"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+# Test files don't need full strict annotations.
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[[tool.mypy.overrides]]
+# Third-party stubs not yet available — allow missing for now.
+module = [
+    "Bio.*",
+    "azimuth.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+markers = [
+    "integration: requires running backend + Supabase test project (deselect with -m 'not integration')",
+    "slow: tests that take >5s",
+]
+
+[tool.coverage.run]
+source = ["apps/api"]
+omit = ["tests/*", "apps/api/sample_data/*"]
