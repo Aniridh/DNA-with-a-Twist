@@ -73,24 +73,42 @@ def anon_client() -> "Client":
 @pytest.fixture(scope="module")
 def seed_run_and_event(service_client: "Client") -> dict[str, Any]:
     """
-    Insert a minimal run + provenance_event row using service role.
-    Returns {run_id, event_id, event_seq} for use in mutation tests.
-    Cleans up after the module (service role DELETE — valid cleanup, not a test).
+    Insert stub research_object → run → provenance_event using service role.
+    Returns {ro_id, run_id, event_id, event_seq} for use in mutation tests.
+    Cleans up in reverse FK order after the module.
+
+    Stub RO uses placeholder hashes — the append-only tests care only about
+    INSERT/UPDATE/DELETE behavior on provenance_events, not RO content.
+    A real RO is required here because runs.ro_id → research_objects(id) is
+    now a FK constraint (migration 002 fix; runs.ro_id without a real RO row
+    would fail the constraint and cause every test in this module to error).
     """
+    ro_id = str(uuid.uuid4())
     run_id = str(uuid.uuid4())
     event_id = str(uuid.uuid4())
 
-    # Insert a stub run row so FK constraint on provenance_events is satisfied.
-    # If the runs table doesn't exist yet, this fixture will fail with a DB error —
-    # that's correct; migration must land first.
+    # 1. Stub ResearchObject row — satisfies runs.ro_id FK.
+    ro_insert = service_client.table("research_objects").insert({
+        "id": ro_id,
+        "content_hash": "a" * 64,          # placeholder SHA-256 hex
+        "backbone_ref": {"bucket": "test", "path": "fixture.fasta"},
+        "backbone_sha256": "b" * 64,        # placeholder SHA-256 hex
+        "pam": "NGG",
+        "metadata": {},
+        "created_by": str(uuid.uuid4()),    # placeholder user UUID
+    }).execute()
+    assert ro_insert.data, f"Failed to insert stub research_object: {ro_insert}"
+
+    # 2. Run row referencing the stub RO.
     run_insert = service_client.table("runs").insert({
         "id": run_id,
-        "ro_id": str(uuid.uuid4()),  # stub FK — no RO needed for this test
+        "ro_id": ro_id,
         "prompt": "test fixture — append-only spec",
         "status": "done",
     }).execute()
     assert run_insert.data, f"Failed to insert seed run: {run_insert}"
 
+    # 3. Provenance event row referencing the run.
     event_insert = service_client.table("provenance_events").insert({
         "id": event_id,
         "run_id": run_id,
@@ -101,17 +119,21 @@ def seed_run_and_event(service_client: "Client") -> dict[str, Any]:
     }).execute()
     assert event_insert.data, f"Failed to insert seed event: {event_insert}"
 
-    yield {"run_id": run_id, "event_id": event_id, "event_seq": 1}
+    yield {"ro_id": ro_id, "run_id": run_id, "event_id": event_id, "event_seq": 1}
 
-    # Teardown: service role cleanup.
-    # If the trigger blocks even service role DELETE, the test itself documents that.
-    # In that case, use a separate test-teardown migration or truncate in the
-    # Supabase test project reset.
-    try:
-        service_client.table("provenance_events").delete().eq("id", event_id).execute()
-        service_client.table("runs").delete().eq("id", run_id).execute()
-    except Exception:
-        pass  # Best-effort cleanup — trigger may block even service role.
+    # Teardown: reverse FK order — event → run → RO.
+    # provenance_events trigger blocks UPDATE/DELETE but service role bypasses RLS;
+    # if trigger is SECURITY DEFINER and blocks ALL callers, event cleanup may fail —
+    # that's acceptable, the Supabase test project resets between CI runs.
+    for table, col, val in [
+        ("provenance_events", "id", event_id),
+        ("runs", "id", run_id),
+        ("research_objects", "id", ro_id),
+    ]:
+        try:
+            service_client.table(table).delete().eq(col, val).execute()
+        except Exception:
+            pass  # Best-effort; test project reset handles residual rows.
 
 
 # ─────────────────────────────────────────────────────────────────────────────
