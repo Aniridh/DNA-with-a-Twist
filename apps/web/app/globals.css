@@ -70,3 +70,72 @@
     font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   }
 }
+
+/* ── DeterminismBadge animations ─────────────────────────────────────────── */
+
+@keyframes verdict-match {
+  0%   { transform: scale(1);    box-shadow: 0 0 0 0 hsl(142 76% 36% / 0); }
+  18%  { transform: scale(0.92); }
+  35%  { transform: scale(1.1);  box-shadow: 0 0 0 12px hsl(142 76% 36% / 0.18); }
+  55%  { transform: scale(0.97); }
+  72%  { transform: scale(1.02); box-shadow: 0 0 0 6px hsl(142 76% 36% / 0.08); }
+  100% { transform: scale(1);    box-shadow: 0 0 0 0 hsl(142 76% 36% / 0); }
+}
+
+@keyframes verdict-mismatch {
+  0%   { transform: translateX(0); }
+  10%  { transform: translateX(-6px); }
+  20%  { transform: translateX(6px); }
+  30%  { transform: translateX(-5px); }
+  40%  { transform: translateX(5px); }
+  50%  { transform: translateX(-4px); }
+  60%  { transform: translateX(4px); }
+  70%  { transform: translateX(-2px); }
+  80%  { transform: translateX(2px); }
+  90%  { transform: translateX(-1px); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes draw-check {
+  from { stroke-dashoffset: 30; }
+  to   { stroke-dashoffset: 0; }
+}
+
+@keyframes draw-cross {
+  from { stroke-dashoffset: 22; }
+  to   { stroke-dashoffset: 0; }
+}
+
+@keyframes pulse-gentle {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
+}
+
+@keyframes live-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+.animate-verdict-match {
+  animation: verdict-match 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.animate-verdict-mismatch {
+  animation: verdict-mismatch 0.6s ease-in-out both;
+}
+
+.animate-draw-check {
+  animation: draw-check 0.35s ease-out 0.15s both;
+}
+
+.animate-draw-cross {
+  animation: draw-cross 0.25s ease-out both;
+}
+
+.animate-pulse-gentle {
+  animation: pulse-gentle 2s ease-in-out infinite;
+}
+
+.animate-live-blink {
+  animation: live-blink 1.4s ease-in-out infinite;
+}

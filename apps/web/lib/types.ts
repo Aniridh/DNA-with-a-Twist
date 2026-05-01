@@ -1,7 +1,6 @@
 /**
- * Provisional types mirroring ARCHITECTURE.md §3.
- * DELETE this file and import from packages/schemas/ when backend ships that package.
- * Reviewer enforces the swap.
+ * Provisional types — delete when packages/schemas/ResearchObject lands.
+ * See ARCHITECTURE.md §3 and ruling 6.
  */
 
 export type StorageRef = {
@@ -17,6 +16,8 @@ export type ResearchObject = {
   target_pdb_ref: StorageRef | null;
   target_pdb_sha256: string | null;
   fastq_ref: StorageRef | null;
+  /** TODO(packages/schemas): brand as Sha256 when available */
+  fastq_sha256: string | null;
   fastq_phred_pass_pct: number | null;
   pam: "NGG";
   metadata: Record<string, string>;
@@ -39,7 +40,7 @@ export type Run = {
   ro_id: string;
   prompt: string;
   status: RunStatus;
-  manifest: RunManifest;
+  manifest: RunManifest | null;
   created_at: string;
   finished_at: string | null;
 };

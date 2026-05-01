@@ -101,6 +101,7 @@ const MOCK_RO: ResearchObject = {
   target_pdb_ref: { bucket: "uploads", path: "7T1B.pdb" },
   target_pdb_sha256: "b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3",
   fastq_ref: null,
+  fastq_sha256: null,
   fastq_phred_pass_pct: null,
   pam: "NGG",
   metadata: { organism: "Homo sapiens", gene: "BCL11A", enhancer: "+58" },
