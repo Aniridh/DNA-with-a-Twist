@@ -1,29 +1,13 @@
 /**
- * Provisional types — delete when packages/schemas/ResearchObject lands.
- * See ARCHITECTURE.md §3 and ruling 6.
+ * Provisional types for Run, ProvenanceEvent, Result, and API shapes.
+ * ResearchObject has moved to packages/schemas/ResearchObject.ts.
+ * Run, ProvenanceEvent, Result follow when backend ships those schemas.
+ * See ARCHITECTURE.md §3.
  */
 
-export type StorageRef = {
-  bucket: string;
-  path: string;
-};
-
-export type ResearchObject = {
-  id: string;
-  content_hash: string;
-  backbone_ref: StorageRef;
-  backbone_sha256: string;
-  target_pdb_ref: StorageRef | null;
-  target_pdb_sha256: string | null;
-  fastq_ref: StorageRef | null;
-  /** TODO(packages/schemas): brand as Sha256 when available */
-  fastq_sha256: string | null;
-  fastq_phred_pass_pct: number | null;
-  pam: "NGG";
-  metadata: Record<string, string>;
-  created_at: string; // ISO-8601 UTC Z
-  created_by: string; // supabase auth user id
-};
+// StorageRef comes from the schema package; re-exported so provisional types compile.
+import type { StorageRef } from "@schemas/ResearchObject";
+export type { StorageRef };
 
 export type RunStatus = "queued" | "running" | "done" | "failed";
 
@@ -125,4 +109,3 @@ export type ExportResponse = {
 export type ReplayResponse = {
   new_run_id: string;
 };
-

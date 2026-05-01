@@ -8,9 +8,7 @@ export type DeterminismState = "checking" | "match" | "mismatch";
 
 export interface DeterminismBadgeProps {
   state: DeterminismState;
-  /** Hash from the original run. TODO(packages/schemas): brand as Sha256. */
   hashA?: string;
-  /** Hash from the replay. TODO(packages/schemas): brand as Sha256. */
   hashB?: string;
   className?: string;
 }

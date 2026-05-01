@@ -6,7 +6,6 @@ import { Hash } from "@/components/primitives/Hash";
 
 interface ManifestCardProps {
   run: Run;
-  /** TODO(packages/schemas): brand as Sha256 when available. */
   roHash?: string;
   className?: string;
 }
@@ -37,12 +36,10 @@ export function ManifestCard({ run, roHash, className }: ManifestCardProps) {
             <Hash hash={manifest.git_sha} chars={7} />
           </Field>
           <Field label="Env fingerprint">
-            {/* TODO(packages/schemas): brand as Sha256 */}
             <Hash hash={manifest.env_fingerprint} chars={6} />
           </Field>
           {roHash && (
             <Field label="RO hash">
-              {/* TODO(packages/schemas): brand as Sha256 */}
               <Hash hash={roHash} chars={6} showVerify />
             </Field>
           )}

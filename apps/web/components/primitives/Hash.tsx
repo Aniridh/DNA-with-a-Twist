@@ -1,8 +1,5 @@
 "use client";
 
-// TODO(packages/schemas): when packages/schemas/ResearchObject.ts lands, hash
-// props typed as Sha256 brand should be imported from there. For now: string.
-
 import { cn } from "@/lib/utils";
 import { useCopyHash } from "@/lib/hooks/useCopyHash";
 import {
@@ -13,7 +10,6 @@ import {
 } from "@/components/ui/tooltip";
 
 export interface HashProps {
-  /** SHA-256 hex string. TODO(packages/schemas): brand as Sha256 when available. */
   hash: string;
   /** Number of chars to show on each side of the ellipsis. Default 6. */
   chars?: number;

@@ -6,6 +6,7 @@
  */
 
 import type { ApiClient, MockEventStream } from "./api";
+import type { ResearchObject, Sha256 } from "@schemas/ResearchObject";
 import type {
   CreateRORequest,
   CreateRunRequest,
@@ -15,7 +16,6 @@ import type {
   ProvenanceEvent,
   ProvenanceEventType,
   ReplayResponse,
-  ResearchObject,
   Result,
   Run,
   RunStatus,
@@ -95,11 +95,11 @@ const MOCK_GUIDES: GuideCandidate[] = [
 
 const MOCK_RO: ResearchObject = {
   id: MOCK_RO_ID,
-  content_hash: MOCK_CONTENT_HASH,
+  content_hash: MOCK_CONTENT_HASH as Sha256,
   backbone_ref: { bucket: "uploads", path: "BCL11A_enhancer.fasta" },
-  backbone_sha256: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+  backbone_sha256: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2" as Sha256,
   target_pdb_ref: { bucket: "uploads", path: "7T1B.pdb" },
-  target_pdb_sha256: "b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3",
+  target_pdb_sha256: "b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3" as Sha256,
   fastq_ref: null,
   fastq_sha256: null,
   fastq_phred_pass_pct: null,

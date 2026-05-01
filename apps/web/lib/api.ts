@@ -1,10 +1,10 @@
+import type { ResearchObject } from "@schemas/ResearchObject";
 import type {
   CreateRORequest,
   CreateRunRequest,
   CreateRunResponse,
   ExportResponse,
   ReplayResponse,
-  ResearchObject,
   Result,
   Run,
   UploadResponse,
