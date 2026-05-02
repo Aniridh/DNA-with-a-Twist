@@ -15,7 +15,7 @@ const EXAMPLE_PROMPTS = [
 function NewRunForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const roId = searchParams.get("ro") ?? "";
+  const roId = searchParams.get("ro") ?? "ro-demo-bcl11a-enhancer";
 
   const [prompt, setPrompt] = useState("");
   const [submitting, setSubmitting] = useState(false);
