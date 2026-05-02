@@ -48,6 +48,18 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Design system — direct tokens
+        teal: {
+          DEFAULT: "#5eead4",
+          dim: "#2dd4bf",
+          subtle: "rgba(94,234,212,0.1)",
+        },
+        surface: {
+          DEFAULT: "#111111",
+          elevated: "#181818",
+          subtle: "#1a1a1a",
+        },
+        "border-subtle": "#222222",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -57,6 +69,24 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+      },
+      fontSize: {
+        display: ["clamp(64px,8vw,120px)", { lineHeight: "1.0", letterSpacing: "-0.04em", fontWeight: "600" }],
+        heading: ["clamp(36px,5vw,56px)", { lineHeight: "1.1", letterSpacing: "-0.03em", fontWeight: "600" }],
+      },
+      animation: {
+        "hash-char": "char-in 0.2s ease-out both",
+        shimmer: "shimmer 2.5s linear infinite",
+      },
+      keyframes: {
+        "char-in": {
+          from: { opacity: "0", transform: "translateY(4px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+        shimmer: {
+          "0%": { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" },
+        },
       },
     },
   },
