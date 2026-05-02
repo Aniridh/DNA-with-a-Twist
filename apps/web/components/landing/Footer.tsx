@@ -11,7 +11,7 @@ export function Footer() {
 
         <div className="flex flex-col items-center gap-3">
           <Link
-            href="/login"
+            href="/dashboard"
             className="inline-flex h-9 items-center rounded-md bg-teal px-5 text-sm font-medium text-[#0a0a0a] hover:bg-teal-dim transition-colors"
           >
             Try the demo

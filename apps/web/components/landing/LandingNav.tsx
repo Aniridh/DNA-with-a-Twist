@@ -42,10 +42,10 @@ export function LandingNav() {
             Why us
           </a>
           <Link
-            href="/login"
+            href="/dashboard"
             className="inline-flex h-9 items-center rounded-md bg-teal px-4 text-sm font-medium text-[#0a0a0a] hover:bg-teal-dim transition-colors duration-150"
           >
-            Sign in
+            Try the demo
           </Link>
         </div>
       </div>

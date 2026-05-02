@@ -241,7 +241,7 @@ export function DemoTeaser() {
           className="mt-10 text-center"
         >
           <Link
-            href="/login"
+            href="/dashboard"
             className="inline-flex h-12 items-center rounded-md bg-teal px-8 text-base font-medium text-[#0a0a0a] hover:bg-teal-dim transition-colors shadow-lg shadow-teal/10"
           >
             See the full demo →

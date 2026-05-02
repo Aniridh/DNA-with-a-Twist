@@ -17,8 +17,8 @@ export default function ExamplesLayout({ children }: { children: React.ReactNode
               Examples
             </Link>
           </div>
-          <Link href="/login" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
-            Sign in
+          <Link href="/dashboard" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+            Try the demo
           </Link>
         </div>
       </header>

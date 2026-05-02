@@ -1,13 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-
-interface SideNavProps {
-  userEmail: string;
-}
 
 const NAV_ITEMS = [
   {
@@ -42,24 +37,14 @@ const NAV_ITEMS = [
   },
 ] as const;
 
-export function SideNav({ userEmail }: SideNavProps) {
+export function SideNav() {
   const pathname = usePathname();
-  const router = useRouter();
-
-  async function handleSignOut() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
-  }
-
-  const initials = userEmail.slice(0, 2).toUpperCase();
 
   return (
     <aside className="flex h-screen w-56 shrink-0 flex-col border-r border-[#222] bg-surface sticky top-0">
       {/* Logo */}
       <div className="flex h-14 items-center px-5 border-b border-[#222]">
-        <Link href="/dashboard" className="flex items-center gap-2 group">
+        <Link href="/" className="flex items-center gap-2 group">
           <span className="text-sm font-semibold text-foreground group-hover:text-teal transition-colors">
             DNA with a Twist
           </span>
@@ -99,27 +84,9 @@ export function SideNav({ userEmail }: SideNavProps) {
         </Link>
       </div>
 
-      {/* User */}
-      <div className="border-t border-[#222] px-3 py-3">
-        <div className="flex items-center gap-3 rounded-lg px-2 py-2">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-teal/20 text-[10px] font-semibold text-teal">
-            {initials}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs text-muted-foreground">{userEmail}</p>
-          </div>
-          <button
-            type="button"
-            onClick={handleSignOut}
-            title="Sign out"
-            className="text-muted-foreground hover:text-red-400 transition-colors shrink-0"
-          >
-            <svg viewBox="0 0 20 20" fill="currentColor" className="size-4">
-              <path fillRule="evenodd" d="M3 4.25A2.25 2.25 0 015.25 2h5.5A2.25 2.25 0 0113 4.25v2a.75.75 0 01-1.5 0v-2a.75.75 0 00-.75-.75h-5.5a.75.75 0 00-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 00.75-.75v-2a.75.75 0 011.5 0v2A2.25 2.25 0 0110.75 18h-5.5A2.25 2.25 0 013 15.75V4.25z" clipRule="evenodd" />
-              <path fillRule="evenodd" d="M19 10a.75.75 0 00-.75-.75H8.704l1.048-1.047a.75.75 0 10-1.06-1.061l-2.5 2.5a.75.75 0 000 1.06l2.5 2.5a.75.75 0 101.06-1.06L8.704 10.75H18.25A.75.75 0 0019 10z" clipRule="evenodd" />
-            </svg>
-          </button>
-        </div>
+      {/* Demo badge */}
+      <div className="border-t border-[#222] px-4 py-3">
+        <p className="text-[11px] text-muted-foreground/40 text-center">Demo mode — mock data</p>
       </div>
     </aside>
   );

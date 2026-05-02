@@ -181,7 +181,7 @@ function ExampleDetail({ fixture }: { fixture: ExampleFixture }) {
             This is a pre-built demonstration run. Data is synthetic and fixed — no live computation occurs.
           </span>
           <Link
-            href="/login"
+            href="/research-objects/new"
             className="shrink-0 font-medium text-teal-600 dark:text-teal-400 hover:underline underline-offset-4"
           >
             Try it yourself →
