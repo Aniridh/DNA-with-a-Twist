@@ -1,12 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { Hash } from "@/components/primitives/Hash";
 import { apiClient } from "@/lib/getApiClient";
-import { buttonVariants } from "@/components/ui/button";
 
 const EXAMPLE_PROMPTS = [
   "Disrupt GATA1 binding site at +58 enhancer",
@@ -37,84 +35,115 @@ function NewRunForm() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">New Run</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Describe your editing goal. The pipeline will scan for guide RNA candidates and score them.
-        </p>
-      </div>
-
-      {roId && (
-        <div className="rounded-lg border bg-muted/30 px-4 py-3">
-          <p className="text-xs text-muted-foreground mb-1">Research Object</p>
-          <Hash hash={roId} chars={12} />
-        </div>
-      )}
-
-      <div className="rounded-xl border bg-card p-6 space-y-6">
-        <div className="space-y-2">
-          <label className="block text-sm font-medium">
-            Editing goal
-            <span className="ml-1 text-destructive">*</span>
-          </label>
-          <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Describe what you want to achieve…"
-            rows={4}
-            disabled={submitting}
-            className="w-full rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y disabled:opacity-50"
-          />
-          <div className="flex flex-wrap gap-2">
-            {EXAMPLE_PROMPTS.map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => setPrompt(p)}
-                className="rounded-full border px-3 py-1 text-xs text-muted-foreground hover:text-foreground hover:border-muted-foreground/50 transition-colors"
-              >
-                {p}
-              </button>
-            ))}
-          </div>
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: [0, 0, 0.2, 1] }}
+      className="flex min-h-[60vh] items-center justify-center"
+    >
+      <div className="w-full max-w-xl space-y-6">
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground">New Run</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            What edit do you want to simulate?
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Describe your editing goal. The pipeline scans for guide RNA candidates and scores them.
+          </p>
         </div>
 
-        {error && (
-          <div role="alert" className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-            {error}
+        {/* RO badge */}
+        {roId && (
+          <div className="flex items-center justify-center gap-2 text-xs">
+            <span className="text-muted-foreground">Research Object:</span>
+            <span className="font-mono text-teal bg-teal/10 border border-teal/20 rounded px-2 py-0.5">
+              {roId.slice(0, 8)}…
+            </span>
           </div>
         )}
 
-        <div className="flex justify-end">
+        {/* Card */}
+        <div className="rounded-xl border border-[#222] bg-surface p-6 space-y-5">
+          <div className="space-y-3">
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleStart();
+              }}
+              placeholder="e.g. Disrupt GATA1 binding site at +58 enhancer…"
+              rows={4}
+              disabled={submitting}
+              autoFocus
+              className="w-full rounded-lg border border-[#333] bg-[#0d0d0d] px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-teal/50 focus:border-teal/50 resize-none transition-colors disabled:opacity-50"
+            />
+
+            {/* Example chips */}
+            <div className="flex flex-wrap gap-2">
+              {EXAMPLE_PROMPTS.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPrompt(p)}
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-xs transition-colors",
+                    prompt === p
+                      ? "border-teal/40 bg-teal/10 text-teal"
+                      : "border-[#333] text-muted-foreground hover:text-foreground hover:border-[#444]"
+                  )}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {error && (
+            <div className="rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-400">
+              {error}
+            </div>
+          )}
+
           <button
             type="button"
             disabled={!prompt.trim() || !roId || submitting}
             onClick={handleStart}
-            className={cn(
-              buttonVariants(),
-              (!prompt.trim() || !roId || submitting) && "opacity-50 cursor-not-allowed"
-            )}
+            className="w-full h-12 rounded-lg bg-teal text-[#0a0a0a] text-sm font-semibold hover:bg-teal-dim transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {submitting ? (
-              <span className="flex items-center gap-2">
-                <svg className="size-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                Starting…
-              </span>
-            ) : "Start Run →"}
+              <>
+                <motion.span
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 0.8, ease: "linear" }}
+                  className="block size-4 rounded-full border-2 border-[#0a0a0a]/30 border-t-[#0a0a0a]"
+                />
+                Queuing run…
+              </>
+            ) : (
+              <>
+                Start Run
+                <span className="opacity-60 text-xs">⌘↵</span>
+              </>
+            )}
           </button>
         </div>
+
+        <p className="text-center text-xs text-muted-foreground/40">
+          Runs are immutably logged with env fingerprint + git SHA
+        </p>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
 export default function NewRunPage() {
   return (
-    <Suspense fallback={<div className="py-24 text-center text-sm text-muted-foreground">Loading…</div>}>
+    <Suspense fallback={
+      <div className="flex min-h-[60vh] items-center justify-center text-sm text-muted-foreground">
+        Loading…
+      </div>
+    }>
       <NewRunForm />
     </Suspense>
   );
