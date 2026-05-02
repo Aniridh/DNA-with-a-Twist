@@ -12,3 +12,8 @@ app = FastAPI(
 app.include_router(uploads.router, prefix="/api/v1")
 app.include_router(research_objects.router, prefix="/api/v1")
 app.include_router(runs.router, prefix="/api/v1")
+
+
+@app.get("/health")
+async def health() -> dict[str, str]:
+    return {"status": "ok"}
