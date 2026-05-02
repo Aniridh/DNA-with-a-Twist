@@ -1,7 +1,12 @@
-import { createServerSupabaseClient } from "@/lib/supabase-server";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
-import { buttonVariants } from "@/components/ui/button";
+
+const DEMO_NAMES = ["Dr. Chen", "Dr. Patel", "Dr. Okafor", "Dr. Kim", "Dr. Reyes"];
+
+const EXAMPLE_PREVIEWS = [
+  { slug: "bcl11a-enhancer-disruption", title: "BCL11A enhancer disruption", topScore: 0.87 },
+  { slug: "cftr-delta-f508-correction", title: "CFTR ΔF508 correction", topScore: 0.91 },
+  { slug: "trac-car-t-knockout", title: "TRAC locus knockout", topScore: 0.85 },
+];
 
 function greeting() {
   const h = new Date().getHours();
@@ -10,10 +15,12 @@ function greeting() {
   return "Good evening";
 }
 
-export default async function DashboardPage() {
-  const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const name = user?.email?.split("@")[0] ?? "researcher";
+function demoName() {
+  return DEMO_NAMES[Math.floor(Math.random() * DEMO_NAMES.length)];
+}
+
+export default function DashboardPage() {
+  const name = demoName();
 
   return (
     <div className="space-y-10">
@@ -64,6 +71,23 @@ export default async function DashboardPage() {
             body="Upload a sequence to create your first verifiable Research Object."
             cta={{ label: "Create Research Object", href: "/research-objects/new" }}
           />
+          <div className="px-5 pb-5 space-y-3">
+            <p className="text-xs text-muted-foreground font-medium">Or explore with pre-built examples →</p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {EXAMPLE_PREVIEWS.map((ex) => (
+                <Link
+                  key={ex.slug}
+                  href={`/examples/${ex.slug}`}
+                  className="group rounded-lg border border-dashed border-border/60 bg-muted/30 p-3 text-xs hover:border-teal-500/40 hover:bg-muted/60 transition-colors"
+                >
+                  <p className="font-medium text-foreground truncate">{ex.title}</p>
+                  <p className="text-muted-foreground mt-0.5 truncate">
+                    {ex.topScore ? `Top score: ${ex.topScore.toFixed(2)}` : "Error example"}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Recent Runs */}
