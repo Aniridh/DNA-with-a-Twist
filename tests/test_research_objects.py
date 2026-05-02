@@ -170,7 +170,7 @@ def test_create_ro_fasta_only(monkeypatch: Any) -> None:
     with _client() as c:
         resp = c.post(
             "/api/v1/research-objects",
-            json={"backbone_upload_id": _BACKBONE_ID},
+            json={"backbone_id": _BACKBONE_ID},
             headers={"Authorization": "Bearer fake"},
         )
     assert resp.status_code == 201, resp.text
@@ -200,9 +200,9 @@ def test_create_ro_with_fastq_and_pdb(monkeypatch: Any) -> None:
         resp = c.post(
             "/api/v1/research-objects",
             json={
-                "backbone_upload_id": _BACKBONE_ID,
-                "fastq_upload_id": _FASTQ_ID,
-                "pdb_upload_id": _PDB_ID,
+                "backbone_id": _BACKBONE_ID,
+                "fastq_id": _FASTQ_ID,
+                "pdb_id": _PDB_ID,
             },
             headers={"Authorization": "Bearer fake"},
         )
@@ -229,7 +229,7 @@ def test_create_ro_unsupported_pam(monkeypatch: Any) -> None:
     with _client() as c:
         resp = c.post(
             "/api/v1/research-objects",
-            json={"backbone_upload_id": _BACKBONE_ID, "pam": "NAG"},
+            json={"backbone_id": _BACKBONE_ID, "pam": "NAG"},
             headers={"Authorization": "Bearer fake"},
         )
     assert resp.status_code == 422
@@ -241,7 +241,7 @@ def test_create_ro_upload_not_found(monkeypatch: Any) -> None:
     with _client() as c:
         resp = c.post(
             "/api/v1/research-objects",
-            json={"backbone_upload_id": "nonexistent-id"},
+            json={"backbone_id": "nonexistent-id"},
             headers={"Authorization": "Bearer fake"},
         )
     assert resp.status_code == 422
@@ -254,7 +254,7 @@ def test_create_ro_wrong_kind(monkeypatch: Any) -> None:
     with _client() as c:
         resp = c.post(
             "/api/v1/research-objects",
-            json={"backbone_upload_id": _FASTQ_ID},
+            json={"backbone_id": _FASTQ_ID},
             headers={"Authorization": "Bearer fake"},
         )
     assert resp.status_code == 422
@@ -274,7 +274,7 @@ def test_create_ro_duplicate_content_hash(monkeypatch: Any) -> None:
     with _client() as c:
         resp = c.post(
             "/api/v1/research-objects",
-            json={"backbone_upload_id": _BACKBONE_ID},
+            json={"backbone_id": _BACKBONE_ID},
             headers={"Authorization": "Bearer fake"},
         )
     assert resp.status_code == 409

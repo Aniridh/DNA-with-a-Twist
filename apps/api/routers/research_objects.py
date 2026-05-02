@@ -1,4 +1,4 @@
-"""Layer 2 — POST /api/v1/research-objects."""
+"""Layer 2 — POST/GET /api/v1/research-objects."""
 from typing import Annotated
 from uuid import UUID
 
@@ -13,9 +13,10 @@ router = APIRouter(tags=["research-objects"])
 
 
 class ResearchObjectRequest(BaseModel):
-    backbone_upload_id: str
-    fastq_upload_id: str | None = None
-    pdb_upload_id: str | None = None
+    # Field names match ARCHITECTURE.md §4 API contract and test_replay.py.
+    backbone_id: str
+    fastq_id: str | None = None
+    pdb_id: str | None = None
     pam: str = "NGG"
     metadata: dict[str, str] = {}
 
@@ -116,9 +117,9 @@ async def create_research_object(
         )
 
     # Resolve uploads → sha256 + storage refs (server-computed; never trust client).
-    backbone = _fetch_upload(body.backbone_upload_id, user_id, "fasta")
-    fastq_row = _fetch_upload(body.fastq_upload_id, user_id, "fastq") if body.fastq_upload_id else None
-    pdb_row = _fetch_upload(body.pdb_upload_id, user_id, "pdb") if body.pdb_upload_id else None
+    backbone = _fetch_upload(body.backbone_id, user_id, "fasta")
+    fastq_row = _fetch_upload(body.fastq_id, user_id, "fastq") if body.fastq_id else None
+    pdb_row = _fetch_upload(body.pdb_id, user_id, "pdb") if body.pdb_id else None
 
     backbone_sha256: str = backbone["sha256"]  # type: ignore[assignment]
     fastq_sha256: str | None = fastq_row["sha256"] if fastq_row else None  # type: ignore[assignment]
@@ -163,6 +164,40 @@ async def create_research_object(
         raise HTTPException(status_code=502, detail={"code": "db_error", "message": msg}) from exc
 
     ro = result.data[0]
+    return ResearchObjectResponse(
+        id=ro["id"],
+        content_hash=ro["content_hash"],
+        backbone_sha256=ro["backbone_sha256"],
+        target_pdb_sha256=ro["target_pdb_sha256"],
+        fastq_sha256=ro["fastq_sha256"],
+        fastq_phred_pass_pct=ro["fastq_phred_pass_pct"],
+        pam=ro["pam"],
+        metadata=ro["metadata"],
+        backbone_ref=StorageRefOut(**ro["backbone_ref"]),
+        target_pdb_ref=StorageRefOut(**ro["target_pdb_ref"]) if ro.get("target_pdb_ref") else None,
+        fastq_ref=StorageRefOut(**ro["fastq_ref"]) if ro.get("fastq_ref") else None,
+        created_at=str(ro["created_at"]),
+        created_by=str(ro["created_by"]),
+    )
+
+
+@router.get("/research-objects/{ro_id}", response_model=ResearchObjectResponse)
+async def get_research_object(
+    ro_id: str,
+    user_id: Annotated[str, Depends(get_current_user_id)],
+) -> ResearchObjectResponse:
+    """Fetch a ResearchObject by ID. Only the owner may read it."""
+    try:
+        result = service_client().table("research_objects").select("*").eq("id", ro_id).single().execute()
+    except Exception as exc:
+        raise HTTPException(502, detail={"code": "db_error", "message": str(exc)}) from exc
+
+    ro = result.data
+    if ro is None:
+        raise HTTPException(404, detail={"code": "ro_not_found", "ro_id": ro_id})
+    if str(ro["created_by"]) != user_id:
+        raise HTTPException(403, detail={"code": "ro_not_owned"})
+
     return ResearchObjectResponse(
         id=ro["id"],
         content_hash=ro["content_hash"],
