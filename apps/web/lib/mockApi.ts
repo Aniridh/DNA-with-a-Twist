@@ -19,9 +19,7 @@ import type {
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
 const MOCK_USER_ID = "00000000-0000-0000-0000-000000000001";
-const MOCK_RO_ID = "ro-00000000-0000-0000-0000-000000000001";
-const MOCK_RUN_ID = "run-00000000-0000-0000-0000-000000000001";
-
+const MOCK_RO_ID = "ro-bcl11a-demo";
 const MOCK_CONTENT_HASH =
   "9f3ca4e2b87d1f605c3a29e4d81f9b0e3c5d7a2f1e8b4c6d9a0f3e7b2c5d8a1f4";
 
@@ -99,9 +97,12 @@ const MOCK_RO: ResearchObject = {
   fastq_phred_pass_pct: null,
   pam: "NGG",
   metadata: { organism: "Homo sapiens", gene: "BCL11A", enhancer: "+58" },
-  created_at: "2026-04-30T12:00:00Z",
+  created_at: new Date(Date.now() - 3600 * 1000).toISOString(),
   created_by: MOCK_USER_ID,
 };
+
+const ENV_FINGERPRINT = "c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4";
+const GIT_SHA = "abc1234def5678abc1234def5678abc1234def56";
 
 const SSE_SEQUENCE: Array<{ type: ProvenanceEventType; payload: Record<string, unknown>; delayMs: number }> = [
   { type: "run.preflight.ok", payload: { message: "Inputs validated, hashes recorded" }, delayMs: 600 },
@@ -120,47 +121,45 @@ const SSE_SEQUENCE: Array<{ type: ProvenanceEventType; payload: Record<string, u
 
 // ── Mutable mock state ───────────────────────────────────────────────────────
 
-let _runStatus: RunStatus = "queued";
-let _activeRunId = MOCK_RUN_ID;
-let _activeRoId = MOCK_RO_ID;
-let _runEventsLog: ProvenanceEvent[] = [];
-const _ros: ResearchObject[] = [MOCK_RO];
+interface StoredRun {
+  id: string;
+  ro_id: string;
+  prompt: string;
+  status: RunStatus;
+  created_at: string;
+}
 
-function makeMockRun(id: string, roId: string, status: RunStatus = "done"): Run {
+const _ros: ResearchObject[] = [MOCK_RO];
+const _runStore = new Map<string, StoredRun>();
+let _eventsLog: ProvenanceEvent[] = [];
+let _lastRunId: string | null = null;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function makeMockRun(stored: StoredRun): Run {
+  const durationMs = stored.status === "done" ? 6200 : 0;
   return {
-    id,
-    ro_id: roId,
-    prompt: "Disrupt GATA1 binding site at +58 enhancer",
-    status,
+    id: stored.id,
+    ro_id: stored.ro_id,
+    prompt: stored.prompt,
+    status: stored.status,
     manifest: {
-      git_sha: "abc1234def5678abc1234def5678abc1234def56",
+      git_sha: GIT_SHA,
       api_version: "v1",
       scoring_versions: { doench_rs2: "1.0", cfd: "1.0" },
-      started_at: new Date(Date.now() - 75000).toISOString(),
-      env_fingerprint:
-        "c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
+      started_at: stored.created_at,
+      env_fingerprint: ENV_FINGERPRINT,
     },
-    created_at: new Date(Date.now() - 75000).toISOString(),
-    finished_at: status === "done" ? new Date(Date.now() - 75000 + 75000).toISOString() : null,
+    created_at: stored.created_at,
+    finished_at: stored.status === "done"
+      ? new Date(new Date(stored.created_at).getTime() + durationMs).toISOString()
+      : null,
   };
 }
 
-const MOCK_RESULT: Result = {
-  run_id: MOCK_RUN_ID,
-  prediction: {
-    guides: MOCK_GUIDES,
-    summary: {
-      top_score: 0.87,
-      mean_off_target: 4.6,
-      guides_found: 5,
-    },
-  },
-  export_pack_ref: { bucket: "exports", path: `dnatwist_run_${MOCK_RUN_ID}.zip` },
-  export_pack_sha256:
-    "d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5",
-};
-
-// ── SSE mock stream ──────────────────────────────────────────────────────────
+function delay(ms: number) {
+  return new Promise<void>((r) => setTimeout(r, ms));
+}
 
 function createMockEventStream(
   runId: string,
@@ -169,10 +168,7 @@ function createMockEventStream(
 ): MockEventStream {
   return {
     isMock: true,
-    subscribe(
-      onEvent: (event: ProvenanceEvent) => void,
-      onDone: () => void
-    ): () => void {
+    subscribe(onEvent, onDone) {
       let cancelled = false;
       let seq = 0;
 
@@ -201,12 +197,6 @@ function createMockEventStream(
       return () => { cancelled = true; };
     },
   };
-}
-
-// ── Delay helper ──────────────────────────────────────────────────────────────
-
-function delay(ms: number) {
-  return new Promise<void>((r) => setTimeout(r, ms));
 }
 
 // ── Mock client ───────────────────────────────────────────────────────────────
@@ -238,58 +228,88 @@ export const mockApiClient: ApiClient = {
       created_at: new Date().toISOString(),
     };
     _ros.push(ro);
-    _activeRoId = id;
     return ro;
   },
 
   async getResearchObject(id: string): Promise<ResearchObject> {
-    await delay(300);
-    const ro = _ros.find((r) => r.id === id) ?? _ros[_ros.length - 1];
-    return ro;
+    await delay(150);
+    return _ros.find((r) => r.id === id) ?? _ros[_ros.length - 1];
   },
 
   async listResearchObjects(): Promise<ResearchObject[]> {
-    await delay(300);
-    return _ros;
+    await delay(200);
+    return [..._ros].reverse();
   },
 
   async createRun(req: CreateRunRequest): Promise<CreateRunResponse> {
     await delay(500);
-    _runStatus = "queued";
-    _runEventsLog = [];
-    _activeRunId = `run-${Date.now()}`;
-    _activeRoId = req.ro_id;
-    return { run_id: _activeRunId, status_url: `/runs/${_activeRunId}` };
+    const id = `run-${Date.now()}`;
+    const stored: StoredRun = {
+      id,
+      ro_id: req.ro_id,
+      prompt: req.prompt,
+      status: "queued",
+      created_at: new Date().toISOString(),
+    };
+    _runStore.set(id, stored);
+    _lastRunId = id;
+    _eventsLog = [];
+    return { run_id: id, status_url: `/runs/${id}` };
   },
 
   async getRun(id: string): Promise<Run> {
+    await delay(100);
+    const stored = _runStore.get(id);
+    if (stored) return makeMockRun(stored);
+    // Fallback for replay runs that haven't been created yet
+    return makeMockRun({
+      id,
+      ro_id: _lastRunId ? (_runStore.get(_lastRunId)?.ro_id ?? MOCK_RO_ID) : MOCK_RO_ID,
+      prompt: "Replay run",
+      status: "done",
+      created_at: new Date().toISOString(),
+    });
+  },
+
+  async listRunsForRO(roId: string): Promise<Run[]> {
     await delay(200);
-    return makeMockRun(id, _activeRoId, _runStatus);
+    return Array.from(_runStore.values())
+      .filter((r) => r.ro_id === roId)
+      .reverse()
+      .map(makeMockRun);
   },
 
-  async listRunsForRO(_roId: string): Promise<Run[]> {
-    await delay(300);
-    return [makeMockRun(MOCK_RUN_ID, _roId, "done")];
+  async listRuns(): Promise<Run[]> {
+    await delay(200);
+    return Array.from(_runStore.values()).reverse().map(makeMockRun);
   },
 
-  async getResult(_runId: string): Promise<Result> {
+  async getResult(runId: string): Promise<Result> {
     await delay(400);
-    return { ...MOCK_RESULT, run_id: _runId };
+    return {
+      run_id: runId,
+      prediction: {
+        guides: MOCK_GUIDES,
+        summary: { top_score: 0.87, mean_off_target: 4.6, guides_found: 5 },
+      },
+      export_pack_ref: { bucket: "exports", path: `dnatwist_run_${runId}.zip` },
+      export_pack_sha256: "d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5",
+    };
   },
 
   async getExport(runId: string): Promise<ExportResponse> {
     const JSZip = (await import("jszip")).default;
     const zip = new JSZip();
 
-    const run = makeMockRun(runId, _activeRoId, "done");
-    const ro = _ros.find((r) => r.id === _activeRoId) ?? MOCK_RO;
+    const stored = _runStore.get(runId);
+    const ro = _ros.find((r) => r.id === stored?.ro_id) ?? _ros[_ros.length - 1];
+    const run = stored ? makeMockRun(stored) : { manifest: { git_sha: GIT_SHA, api_version: "v1", scoring_versions: {}, started_at: new Date().toISOString(), env_fingerprint: ENV_FINGERPRINT }, finished_at: new Date().toISOString() };
 
     zip.file("manifest.json", JSON.stringify({
       run_id: runId,
-      ro_id: _activeRoId,
+      ro_id: ro.id,
       git_sha: run.manifest!.git_sha,
       api_version: run.manifest!.api_version,
-      scoring_versions: run.manifest!.scoring_versions,
       env_fingerprint: run.manifest!.env_fingerprint,
       started_at: run.manifest!.started_at,
       finished_at: run.finished_at,
@@ -307,10 +327,10 @@ export const mockApiClient: ApiClient = {
     zip.file("prediction.json", JSON.stringify({
       run_id: runId,
       guides: MOCK_GUIDES,
-      summary: MOCK_RESULT.prediction.summary,
+      summary: { top_score: 0.87, mean_off_target: 4.6, guides_found: 5 },
     }, null, 2));
 
-    const eventsToLog = _runEventsLog.length > 0 ? _runEventsLog : SSE_SEQUENCE.map((s, i) => ({
+    const eventsToLog = _eventsLog.length > 0 ? _eventsLog : SSE_SEQUENCE.map((s, i) => ({
       id: `mock-event-${i}`,
       run_id: runId,
       seq: i,
@@ -321,27 +341,40 @@ export const mockApiClient: ApiClient = {
     zip.file("events.jsonl", eventsToLog.map((e) => JSON.stringify(e)).join("\n"));
 
     const blob = await zip.generateAsync({ type: "blob" });
-    const url = URL.createObjectURL(blob);
-
     return {
-      url,
+      url: URL.createObjectURL(blob),
       expires_at: new Date(Date.now() + 3600 * 1000).toISOString(),
-      sha256: MOCK_RESULT.export_pack_sha256!,
+      sha256: "d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5",
     };
   },
 
   async replayRun(runId: string): Promise<ReplayResponse> {
     await delay(800);
-    return { new_run_id: `replay-${runId}` };
+    const original = _runStore.get(runId);
+    const replayId = `replay-${runId}`;
+    _runStore.set(replayId, {
+      id: replayId,
+      ro_id: original?.ro_id ?? MOCK_RO_ID,
+      prompt: original?.prompt ?? "Replay",
+      status: "queued",
+      created_at: new Date().toISOString(),
+    });
+    _lastRunId = replayId;
+    _eventsLog = [];
+    return { new_run_id: replayId };
   },
 
   streamRunEvents(runId: string): MockEventStream {
-    _runStatus = "running";
-    _runEventsLog = [];
+    const stored = _runStore.get(runId);
+    if (stored) stored.status = "running";
+    _eventsLog = [];
     return createMockEventStream(
       runId,
-      (e) => { _runEventsLog.push(e); },
-      () => { _runStatus = "done"; }
+      (e) => { _eventsLog.push(e); },
+      () => {
+        const s = _runStore.get(runId);
+        if (s) s.status = "done";
+      }
     );
   },
 };

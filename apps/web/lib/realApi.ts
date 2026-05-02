@@ -78,6 +78,10 @@ export const realApiClient: ApiClient = {
     return apiFetch(`/api/v1/runs?ro_id=${roId}`);
   },
 
+  listRuns(): Promise<Run[]> {
+    return apiFetch("/api/v1/runs");
+  },
+
   getResult(runId: string): Promise<Result> {
     return apiFetch(`/api/v1/runs/${runId}/result`);
   },

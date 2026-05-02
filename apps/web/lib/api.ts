@@ -23,6 +23,7 @@ export interface ApiClient {
   createRun(req: CreateRunRequest): Promise<CreateRunResponse>;
   getRun(id: string): Promise<Run>;
   listRunsForRO(roId: string): Promise<Run[]>;
+  listRuns(): Promise<Run[]>;
 
   // L4 — results
   getResult(runId: string): Promise<Result>;
