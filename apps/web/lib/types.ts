@@ -89,6 +89,8 @@ export type CreateRORequest = {
   pdb_upload_id?: string;
   pam?: "NGG";
   metadata: Record<string, string>;
+  /** Demo-only: mock uses this as the RO's content_hash instead of MOCK_CONTENT_HASH. */
+  _demo_content_hash?: string;
 };
 
 export type CreateRunRequest = {
