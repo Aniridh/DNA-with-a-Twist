@@ -1,7 +1,7 @@
 """DNA with a Twist — FastAPI application entry point."""
 from fastapi import FastAPI
 
-from routers import research_objects, uploads
+from routers import research_objects, runs, uploads
 
 app = FastAPI(
     title="DNA with a Twist API",
@@ -11,3 +11,4 @@ app = FastAPI(
 
 app.include_router(uploads.router, prefix="/api/v1")
 app.include_router(research_objects.router, prefix="/api/v1")
+app.include_router(runs.router, prefix="/api/v1")
