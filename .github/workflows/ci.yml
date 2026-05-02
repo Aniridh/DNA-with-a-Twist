@@ -147,7 +147,23 @@ jobs:
             pip install -e "apps/api[dev]"
           fi
 
+      - name: Check whether integration secrets are configured
+        id: secrets-check
+        run: |
+          if [ -n "$API_BASE_URL" ] && [ -n "$SUPABASE_TEST_URL" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "Integration secrets not set (API_BASE_URL or SUPABASE_TEST_URL missing)."
+            echo "Add TEST_API_BASE_URL and SUPABASE_TEST_URL to repo secrets to enable."
+            echo "Skipping integration tests — unit tests already passed above."
+          fi
+        env:
+          API_BASE_URL: ${{ secrets.TEST_API_BASE_URL }}
+          SUPABASE_TEST_URL: ${{ secrets.SUPABASE_TEST_URL }}
+
       - name: Run integration tests
+        if: steps.secrets-check.outputs.configured == 'true'
         run: pytest tests/ -v --tb=short -m integration
         env:
           PYTHONPATH: apps/api
