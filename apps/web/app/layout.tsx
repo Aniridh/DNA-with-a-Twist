@@ -16,8 +16,21 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://cas-ai.app"),
   title: "DNA with a Twist — Provenance Lab",
   description: "Verifiable gene-editing research objects and simulation runs.",
+  openGraph: {
+    title: "DNA with a Twist — Provenance Lab",
+    description: "Hash, version, and replay every CRISPR experiment. Verifiable by default.",
+    url: "https://cas-ai.app",
+    siteName: "DNA with a Twist",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "DNA with a Twist",
+    description: "Hash, version, and replay every CRISPR experiment. Verifiable by default.",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
