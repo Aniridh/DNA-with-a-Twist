@@ -53,7 +53,7 @@ function HashReveal({ hash }: { hash: string }) {
   });
 
   return (
-    <span className="font-mono text-teal text-2xl sm:text-3xl tracking-wider break-all teal-glow">
+    <span className="font-mono text-teal text-base sm:text-2xl tracking-wide sm:tracking-wider break-all teal-glow">
       {hash.slice(0, revealed)}
       {revealed < hash.length && <span className="animate-pulse opacity-60">_</span>}
     </span>
@@ -74,13 +74,13 @@ function Stepper({ current }: { current: Step }) {
   const idx = STEPS.findIndex((s) => s.key === current);
   const safeIdx = idx < 0 ? STEPS.length - 1 : idx;
   return (
-    <div className="flex items-center gap-0 mb-10">
+    <div className="flex items-center gap-0 mb-8">
       {STEPS.map((step, i) => {
         const done = i < safeIdx;
         const active = i === safeIdx;
         return (
           <div key={step.key} className="flex items-center">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <span
                 className={cn(
                   "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold border transition-all",
@@ -91,12 +91,12 @@ function Stepper({ current }: { current: Step }) {
               >
                 {done ? "✓" : i + 1}
               </span>
-              <span className={cn("text-sm", active ? "text-foreground font-medium" : "text-muted-foreground")}>
+              <span className={cn("text-[11px] sm:text-sm", active ? "text-foreground font-medium" : "text-muted-foreground")}>
                 {step.label}
               </span>
             </div>
             {i < STEPS.length - 1 && (
-              <div className={cn("mx-4 h-px w-8 shrink-0", done ? "bg-teal/50" : "bg-[#222]")} />
+              <div className={cn("mx-2 sm:mx-4 h-px w-6 sm:w-8 shrink-0", done ? "bg-teal/50" : "bg-[#222]")} />
             )}
           </div>
         );
@@ -221,20 +221,20 @@ export default function NewROPage() {
         {/* ── Step 2 ── */}
         {step === "review" && (
           <motion.div key="review" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
-            className="rounded-xl border border-[#222] bg-surface p-6 space-y-6">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="rounded-lg border border-[#222] bg-[#0a0a0a] p-4 text-center">
-                <p className="text-xs text-muted-foreground mb-1">Length</p>
-                <p className="font-mono text-lg text-foreground">{analysis?.len.toLocaleString()}</p>
+            className="rounded-xl border border-[#222] bg-surface p-4 sm:p-6 space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4">
+              <div className="rounded-lg border border-[#222] bg-[#0a0a0a] p-3 sm:p-4 text-center">
+                <p className="text-[10px] sm:text-xs text-muted-foreground mb-1">Length</p>
+                <p className="font-mono text-base sm:text-lg text-foreground">{analysis?.len.toLocaleString()}</p>
                 <p className="text-[10px] text-muted-foreground">bp</p>
               </div>
-              <div className="rounded-lg border border-[#222] bg-[#0a0a0a] p-4 text-center">
-                <p className="text-xs text-muted-foreground mb-1">GC content</p>
-                <p className={`font-mono text-lg ${parseFloat(analysis?.gc ?? "0") >= 40 ? "text-teal" : "text-amber-400"}`}>{analysis?.gc}%</p>
+              <div className="rounded-lg border border-[#222] bg-[#0a0a0a] p-3 sm:p-4 text-center">
+                <p className="text-[10px] sm:text-xs text-muted-foreground mb-1">GC%</p>
+                <p className={`font-mono text-base sm:text-lg ${parseFloat(analysis?.gc ?? "0") >= 40 ? "text-teal" : "text-amber-400"}`}>{analysis?.gc}%</p>
               </div>
-              <div className="rounded-lg border border-[#222] bg-[#0a0a0a] p-4 text-center">
-                <p className="text-xs text-muted-foreground mb-1">Validation</p>
-                <p className="font-mono text-lg text-teal">✓ valid</p>
+              <div className="rounded-lg border border-[#222] bg-[#0a0a0a] p-3 sm:p-4 text-center">
+                <p className="text-[10px] sm:text-xs text-muted-foreground mb-1">Valid</p>
+                <p className="font-mono text-base sm:text-lg text-teal">✓</p>
               </div>
             </div>
 

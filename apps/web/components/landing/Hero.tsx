@@ -86,8 +86,6 @@ export function Hero() {
     });
   }, []);
 
-  // Determine if we should animate (once per session, skip if reduced motion)
-  const [shouldAnimate] = useState<boolean>(() => false); // server-safe default
   const [animEnabled, setAnimEnabled] = useState(false);
 
   // Animation visibility states — default to final (shown) state
@@ -293,7 +291,7 @@ export function Hero() {
       {/* Bottom fade */}
       <div className="pointer-events-none absolute bottom-0 inset-x-0 h-32 bg-gradient-to-t from-[#0a0a0a] to-transparent" />
 
-      <div className="relative mx-auto max-w-6xl px-6 pt-32 pb-20 text-center">
+      <div className="relative mx-auto max-w-6xl px-4 sm:px-6 pt-24 sm:pt-32 pb-14 sm:pb-20 text-center">
         <div className="space-y-8">
 
           {/* Eyebrow pill */}
@@ -363,7 +361,7 @@ export function Hero() {
               </p>
 
               <div className="min-h-[2rem] flex items-center">
-                <span className="font-mono text-base sm:text-lg leading-relaxed tracking-wide break-all">
+                <span className="font-mono text-sm sm:text-base sm:text-lg leading-relaxed tracking-wide break-all">
                   {typedChars.split("").map((char, i) => (
                     <span
                       key={i}
@@ -394,7 +392,7 @@ export function Hero() {
           <motion.div
             animate={{ opacity: cta ? 1 : 0, y: cta ? 0 : 8 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
-            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+            className="flex flex-col sm:flex-row gap-4 justify-center items-stretch sm:items-center"
           >
             <motion.div
               animate={isLoop ? { scale: [1, 1.02, 1] } : {}}
@@ -407,7 +405,7 @@ export function Hero() {
             >
               <Link
                 href="/dashboard"
-                className="inline-flex h-12 items-center rounded-md bg-teal px-8 text-base font-medium text-[#0a0a0a] hover:bg-teal-dim transition-colors duration-150 shadow-lg shadow-teal/10"
+                className="flex justify-center h-12 items-center rounded-md bg-teal px-8 text-base font-medium text-[#0a0a0a] hover:bg-teal-dim transition-colors duration-150 shadow-lg shadow-teal/10"
               >
                 Try the demo
               </Link>
@@ -415,7 +413,7 @@ export function Hero() {
 
             <a
               href="#pipeline"
-              className="inline-flex h-12 items-center rounded-md border border-[#333] px-8 text-base font-medium text-muted-foreground hover:text-foreground hover:border-[#444] transition-colors duration-150"
+              className="flex justify-center h-12 items-center rounded-md border border-[#333] px-8 text-base font-medium text-muted-foreground hover:text-foreground hover:border-[#444] transition-colors duration-150"
             >
               See how it works ↓
             </a>

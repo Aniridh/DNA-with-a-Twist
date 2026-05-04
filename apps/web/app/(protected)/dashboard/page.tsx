@@ -38,23 +38,23 @@ export default function DashboardPage() {
   return (
     <div className="space-y-10">
       {/* Greeting */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+          <h1 className="text-xl sm:text-3xl font-semibold tracking-tight text-foreground">
             {greeting()}, <span className="text-teal">{name}</span>
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">{date}</p>
         </div>
         <Link
           href="/research-objects/new"
-          className="inline-flex h-10 items-center rounded-lg bg-teal px-5 text-sm font-medium text-[#0a0a0a] hover:bg-teal-dim transition-colors"
+          className="inline-flex h-10 items-center justify-center rounded-lg bg-teal px-5 text-sm font-medium text-[#0a0a0a] hover:bg-teal-dim transition-colors sm:shrink-0"
         >
           + New Research Object
         </Link>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[
           { label: "Research Objects", value: loading ? "—" : String(ros.length) },
           { label: "Total Runs", value: loading ? "—" : String(runs.length) },
@@ -68,9 +68,9 @@ export default function DashboardPage() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="rounded-xl border border-[#222] bg-surface p-5"
+            className="rounded-xl border border-[#222] bg-surface p-4 sm:p-5"
           >
-            <p className="text-xs text-muted-foreground mb-2">{stat.label}</p>
+            <p className="text-xs text-muted-foreground mb-1 sm:mb-2">{stat.label}</p>
             <p className="text-2xl font-semibold text-foreground">{stat.value}</p>
           </motion.div>
         ))}

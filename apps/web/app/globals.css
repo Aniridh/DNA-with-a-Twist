@@ -55,6 +55,7 @@
   body {
     @apply bg-background text-foreground antialiased;
     background-color: #0a0a0a;
+    overflow-x: hidden;
   }
 
   /* Scrollbar — subtle */
@@ -76,14 +77,14 @@
 
   /* Display typography */
   .text-display {
-    font-size: clamp(64px, 8vw, 120px);
+    font-size: clamp(40px, 9vw, 120px);
     font-weight: 600;
     letter-spacing: -0.04em;
     line-height: 1.0;
   }
 
   .text-heading {
-    font-size: clamp(36px, 5vw, 56px);
+    font-size: clamp(28px, 6vw, 56px);
     font-weight: 600;
     letter-spacing: -0.03em;
     line-height: 1.1;

@@ -106,14 +106,14 @@ export function DemoTeaser() {
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
   return (
-    <section className="py-32 px-6 bg-[#0a0a0a]">
+    <section className="py-16 sm:py-32 px-6 bg-[#0a0a0a]">
       <div className="mx-auto max-w-6xl">
         <motion.div
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
           variants={fadeUp}
-          className="mb-16 text-center"
+          className="mb-10 sm:mb-16 text-center"
         >
           <p className="text-sm font-mono text-teal uppercase tracking-widest mb-4">Live demo</p>
           <h2 className="text-heading text-foreground">See it work in 30 seconds</h2>
@@ -135,9 +135,10 @@ export function DemoTeaser() {
                 <button
                   type="button"
                   onClick={() => { setSequence(BCL11A_SEQUENCE); reset(); }}
-                  className="text-xs text-teal hover:text-teal-dim transition-colors"
+                  className="text-xs text-teal hover:text-teal-dim transition-colors shrink-0"
                 >
-                  Use example: BCL11A enhancer
+                  <span className="hidden sm:inline">Use example: BCL11A enhancer</span>
+                  <span className="sm:hidden">Use example</span>
                 </button>
               </div>
               <textarea
@@ -216,7 +217,7 @@ export function DemoTeaser() {
                           animate={{ opacity: 1, y: 0 }}
                           className="flex items-center gap-3 rounded-lg border border-[#222] bg-surface px-3 py-2"
                         >
-                          <span className="font-mono text-xs text-foreground tracking-wide">{g.seq}</span>
+                          <span className="font-mono text-[10px] sm:text-xs text-foreground tracking-wide truncate min-w-0">{g.seq}</span>
                           <span className={`ml-auto text-xs font-mono shrink-0 ${g.score >= 0.8 ? "text-teal" : g.score >= 0.6 ? "text-amber-400" : "text-muted-foreground"}`}>
                             {g.score.toFixed(2)}
                           </span>

@@ -140,10 +140,10 @@ export default function RunPage() {
                 transition={{ duration: 0.2 }}
                 className="flex gap-3 text-muted-foreground/70"
               >
-                <span className="shrink-0 text-muted-foreground/30">
+                <span className="hidden sm:inline shrink-0 text-muted-foreground/30">
                   {String(i + 1).padStart(3, "0")}
                 </span>
-                <span className="shrink-0 text-muted-foreground/50 min-w-[10rem]">
+                <span className="shrink-0 text-muted-foreground/50 sm:min-w-[10rem]">
                   [{event.event_type}]
                 </span>
                 <span className={cn(
@@ -183,7 +183,14 @@ export default function RunPage() {
               <h2 className="text-sm font-semibold text-foreground">Guide candidates</h2>
               <span className="text-xs text-muted-foreground">{result.prediction.guides.length} found</span>
             </div>
-            <div className="overflow-x-auto">
+            {/* Mobile: stacked cards */}
+            <div className="sm:hidden divide-y divide-[#1a1a1a]">
+              {result.prediction.guides.map((guide, i) => (
+                <GuideCard key={i} guide={guide} />
+              ))}
+            </div>
+            {/* Desktop: table */}
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-xs font-mono">
                 <thead>
                   <tr className="border-b border-[#222] text-muted-foreground">
@@ -274,6 +281,39 @@ function formatPayload(payload: Record<string, unknown>): string {
   return Object.entries(payload)
     .map(([k, v]) => `${k}=${String(v)}`)
     .join("  ");
+}
+
+function GuideCard({ guide }: { guide: GuideCandidate }) {
+  const offTargetColor = guide.off_target_count < 3
+    ? "text-teal bg-teal/10 border-teal/20"
+    : guide.off_target_count <= 7
+    ? "text-amber-400 bg-amber-400/10 border-amber-400/20"
+    : "text-red-400 bg-red-400/10 border-red-400/20";
+
+  const scoreWidth = `${Math.round(guide.on_target_score * 100)}%`;
+
+  return (
+    <div className="px-4 py-3 space-y-2">
+      <div className="flex items-center gap-1.5 font-mono text-xs">
+        <span className="text-foreground/80 break-all">{guide.sequence}</span>
+        <span className="text-teal shrink-0">{guide.pam}</span>
+      </div>
+      <div className="flex items-center gap-3 text-xs">
+        <div className="flex items-center gap-2 flex-1">
+          <div className="h-1.5 w-20 rounded-full bg-[#222] overflow-hidden">
+            <div className="h-full rounded-full bg-teal" style={{ width: scoreWidth }} />
+          </div>
+          <span className="font-mono text-foreground/70">{guide.on_target_score.toFixed(2)}</span>
+        </div>
+        <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium shrink-0", offTargetColor)}>
+          {guide.off_target_count} off-target
+        </span>
+        <span className="font-mono text-muted-foreground text-[10px] shrink-0">
+          {guide.strand === "+" ? "+" : "−"}{guide.position}
+        </span>
+      </div>
+    </div>
+  );
 }
 
 function GuideRow({ guide }: { guide: GuideCandidate }) {

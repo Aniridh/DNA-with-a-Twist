@@ -71,8 +71,8 @@ const config: Config = {
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
       },
       fontSize: {
-        display: ["clamp(64px,8vw,120px)", { lineHeight: "1.0", letterSpacing: "-0.04em", fontWeight: "600" }],
-        heading: ["clamp(36px,5vw,56px)", { lineHeight: "1.1", letterSpacing: "-0.03em", fontWeight: "600" }],
+        display: ["clamp(40px,9vw,120px)", { lineHeight: "1.0", letterSpacing: "-0.04em", fontWeight: "600" }],
+        heading: ["clamp(28px,6vw,56px)", { lineHeight: "1.1", letterSpacing: "-0.03em", fontWeight: "600" }],
       },
       animation: {
         "hash-char": "char-in 0.2s ease-out both",

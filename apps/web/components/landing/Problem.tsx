@@ -40,14 +40,14 @@ const PROBLEMS = [
 
 export function Problem() {
   return (
-    <section className="py-32 px-6 bg-[#0a0a0a]">
+    <section className="py-16 sm:py-32 px-6 bg-[#0a0a0a]">
       <div className="mx-auto max-w-6xl">
         <motion.div
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
           variants={fadeUp}
-          className="mb-20 text-center"
+          className="mb-10 sm:mb-20 text-center"
         >
           <p className="text-sm font-mono text-teal uppercase tracking-widest mb-4">The problem</p>
           <h2 className="text-heading text-foreground">Science runs on trust.<br />Trust runs on verification.</h2>
@@ -64,7 +64,7 @@ export function Problem() {
             <motion.div
               key={p.title}
               variants={fadeUp}
-              className="group rounded-xl border border-[#222] bg-surface p-8 hover:border-[#2a2a2a] transition-colors duration-200"
+              className="group rounded-xl border border-[#222] bg-surface p-5 sm:p-8 hover:border-[#2a2a2a] transition-colors duration-200"
             >
               <div className="mb-5 inline-flex h-11 w-11 items-center justify-center rounded-lg bg-red-500/10 text-red-400">
                 {p.icon}

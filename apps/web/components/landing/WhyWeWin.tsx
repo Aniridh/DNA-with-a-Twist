@@ -62,25 +62,57 @@ function MarkCell({ mark, isUs }: { mark: Mark; isUs: boolean }) {
 
 export function WhyWeWin() {
   return (
-    <section id="compare" className="py-32 px-6 bg-surface/30">
+    <section id="compare" className="py-16 sm:py-32 px-6 bg-surface/30">
       <div className="mx-auto max-w-6xl">
         <motion.div
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
           variants={fadeUp}
-          className="mb-16 text-center"
+          className="mb-10 sm:mb-16 text-center"
         >
           <p className="text-sm font-mono text-teal uppercase tracking-widest mb-4">Why us</p>
           <h2 className="text-heading text-foreground">The only tool built<br />for reproducibility-first</h2>
         </motion.div>
 
+        {/* Mobile: stacked feature cards */}
         <motion.div
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
           variants={fadeUp}
-          className="overflow-x-auto rounded-xl border border-[#222]"
+          className="sm:hidden space-y-3"
+        >
+          {FEATURES.map((feature, i) => (
+            <div key={feature} className="rounded-xl border border-[#222] bg-surface p-4">
+              <p className="text-sm font-medium text-foreground mb-3">{feature}</p>
+              <div className="grid grid-cols-2 gap-2">
+                {COMPETITORS.map((c) => {
+                  const isUs = c.name === "DNA with a Twist";
+                  return (
+                    <div
+                      key={c.name}
+                      className={`flex items-center gap-2 rounded-lg px-2.5 py-2 ${isUs ? "bg-teal/5 border border-teal/20" : "bg-[#0a0a0a]"}`}
+                    >
+                      <MarkCell mark={c.marks[i]} isUs={isUs} />
+                      <span className={`text-[11px] font-medium truncate ${isUs ? "text-teal" : "text-muted-foreground"}`}>
+                        {isUs ? "Us" : c.name}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </motion.div>
+
+        {/* Desktop: comparison table */}
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-80px" }}
+          variants={fadeUp}
+          className="hidden sm:block overflow-x-auto rounded-xl border border-[#222]"
         >
           <table className="w-full min-w-[640px]">
             <thead>

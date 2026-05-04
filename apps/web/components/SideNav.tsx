@@ -41,7 +41,7 @@ export function SideNav() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-screen w-56 shrink-0 flex-col border-r border-[#222] bg-surface sticky top-0">
+    <aside className="hidden md:flex h-screen w-56 shrink-0 flex-col border-r border-[#222] bg-surface sticky top-0">
       {/* Logo */}
       <div className="flex h-14 items-center px-5 border-b border-[#222]">
         <Link href="/" className="flex items-center gap-2 group">

@@ -78,14 +78,14 @@ const LAYERS = [
 
 export function Pipeline() {
   return (
-    <section id="pipeline" className="py-32 px-6 bg-surface/30">
+    <section id="pipeline" className="py-16 sm:py-32 px-6 bg-surface/30">
       <div className="mx-auto max-w-6xl">
         <motion.div
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
           variants={fadeUp}
-          className="mb-20 text-center"
+          className="mb-10 sm:mb-20 text-center"
         >
           <p className="text-sm font-mono text-teal uppercase tracking-widest mb-4">Architecture</p>
           <h2 className="text-heading text-foreground">Five layers. Zero ambiguity.</h2>
@@ -107,7 +107,7 @@ export function Pipeline() {
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true, margin: "-60px" }}
                 transition={{ duration: 0.5, delay: i * 0.08, ease: [0, 0, 0.2, 1] }}
-                className="group flex gap-6 rounded-xl border border-[#222] bg-surface p-6 hover:border-teal/20 transition-all duration-300 hover:shadow-lg hover:shadow-teal/5"
+                className="group flex gap-4 sm:gap-6 rounded-xl border border-[#222] bg-surface p-4 sm:p-6 hover:border-teal/20 transition-all duration-300 hover:shadow-lg hover:shadow-teal/5"
               >
                 {/* Layer badge */}
                 <div className="shrink-0 flex flex-col items-center gap-2">
@@ -117,7 +117,7 @@ export function Pipeline() {
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-3 mb-2">
+                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 mb-2">
                     <h3 className="text-base font-semibold text-foreground">{layer.title}</h3>
                     <span className="text-sm text-teal font-mono">{layer.tagline}</span>
                   </div>
