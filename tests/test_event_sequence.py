@@ -26,6 +26,8 @@ Failure protocol:
   backend provenance.py and block merge. Do NOT xfail.
   If event_count < 5: same — minimum event vocabulary is a hard contract.
 """
+
+import contextlib
 import os
 from typing import Any
 
@@ -57,6 +59,7 @@ MIN_EVENT_COUNT = 5  # §9 hard minimum
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers (shared with test_replay.py — kept local to avoid coupling)
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _run_to_completion(client: httpx.Client) -> tuple[str, list[dict[str, Any]]]:
     """
@@ -125,21 +128,21 @@ def _run_to_completion(client: httpx.Client) -> tuple[str, list[dict[str, Any]]]
 def _parse_sse_events(sse_text: str) -> list[dict[str, Any]]:
     """Minimal SSE parser — extracts data: lines and JSON-parses them."""
     import json
+
     events = []
     for line in sse_text.splitlines():
         if line.startswith("data:"):
             payload = line[5:].strip()
             if payload and payload != "[DONE]":
-                try:
+                with contextlib.suppress(Exception):
                     events.append(json.loads(payload))
-                except Exception:
-                    pass
     return events
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Tests
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.integration
 class TestEventSequence:
@@ -159,9 +162,7 @@ class TestEventSequence:
 
     # ── Minimum event count ────────────────────────────────────────────────────
 
-    def test_minimum_five_events(
-        self, run_events: tuple[str, list[dict[str, Any]]]
-    ) -> None:
+    def test_minimum_five_events(self, run_events: tuple[str, list[dict[str, Any]]]) -> None:
         """ARCHITECTURE.md §9: every successful run emits ≥5 events."""
         run_id, events = run_events
         assert len(events) >= MIN_EVENT_COUNT, (
@@ -171,9 +172,7 @@ class TestEventSequence:
 
     # ── Monotonic, gap-free seq ────────────────────────────────────────────────
 
-    def test_seq_starts_at_one(
-        self, run_events: tuple[str, list[dict[str, Any]]]
-    ) -> None:
+    def test_seq_starts_at_one(self, run_events: tuple[str, list[dict[str, Any]]]) -> None:
         """First event's seq must be 1."""
         run_id, events = run_events
         first_seq = events[0]["seq"]
@@ -182,9 +181,7 @@ class TestEventSequence:
             "seq must start at 1 for every run."
         )
 
-    def test_seq_monotonic_and_gap_free(
-        self, run_events: tuple[str, list[dict[str, Any]]]
-    ) -> None:
+    def test_seq_monotonic_and_gap_free(self, run_events: tuple[str, list[dict[str, Any]]]) -> None:
         """
         seq values must form a contiguous range [1, 2, 3, ..., N].
         Gaps indicate lost events. Out-of-order values indicate a bug in
@@ -200,9 +197,7 @@ class TestEventSequence:
             "Gaps indicate dropped events. Out-of-order indicates emitter bug."
         )
 
-    def test_seq_unique(
-        self, run_events: tuple[str, list[dict[str, Any]]]
-    ) -> None:
+    def test_seq_unique(self, run_events: tuple[str, list[dict[str, Any]]]) -> None:
         """No two events in the same run may share a seq value."""
         run_id, events = run_events
         seqs = [e["seq"] for e in events]
@@ -226,9 +221,7 @@ class TestEventSequence:
             f"All six required types must be emitted: {REQUIRED_EVENT_TYPES_ORDERED}"
         )
 
-    def test_preflight_ok_is_first(
-        self, run_events: tuple[str, list[dict[str, Any]]]
-    ) -> None:
+    def test_preflight_ok_is_first(self, run_events: tuple[str, list[dict[str, Any]]]) -> None:
         """run.preflight.ok must be the first event (seq=1)."""
         run_id, events = run_events
         first_event_type = events[0]["event_type"]
@@ -238,9 +231,7 @@ class TestEventSequence:
             "before any computation begins."
         )
 
-    def test_summary_done_is_last(
-        self, run_events: tuple[str, list[dict[str, Any]]]
-    ) -> None:
+    def test_summary_done_is_last(self, run_events: tuple[str, list[dict[str, Any]]]) -> None:
         """run.summary.done must be the last event."""
         run_id, events = run_events
         last_event_type = events[-1]["event_type"]
@@ -263,9 +254,7 @@ class TestEventSequence:
             f"run.summary.done (seq {done_seqs})."
         )
 
-    def test_required_order_respected(
-        self, run_events: tuple[str, list[dict[str, Any]]]
-    ) -> None:
+    def test_required_order_respected(self, run_events: tuple[str, list[dict[str, Any]]]) -> None:
         """
         The first occurrence of each required event type must appear in the
         order specified by §5:
@@ -348,23 +337,14 @@ class TestEventSequence:
         """Every event must carry run_id and emitted_at for traceability."""
         run_id, events = run_events
         for event in events:
-            assert "run_id" in event, (
-                f"Event seq={event.get('seq')} missing run_id field"
-            )
+            assert "run_id" in event, f"Event seq={event.get('seq')} missing run_id field"
             assert event["run_id"] == run_id, (
-                f"Event seq={event.get('seq')} has wrong run_id: "
-                f"{event['run_id']} != {run_id}"
+                f"Event seq={event.get('seq')} has wrong run_id: {event['run_id']} != {run_id}"
             )
-            assert "emitted_at" in event, (
-                f"Event seq={event.get('seq')} missing emitted_at field"
-            )
-            assert event["emitted_at"], (
-                f"Event seq={event.get('seq')} has empty emitted_at"
-            )
+            assert "emitted_at" in event, f"Event seq={event.get('seq')} missing emitted_at field"
+            assert event["emitted_at"], f"Event seq={event.get('seq')} has empty emitted_at"
 
-    def test_no_unknown_event_types(
-        self, run_events: tuple[str, list[dict[str, Any]]]
-    ) -> None:
+    def test_no_unknown_event_types(self, run_events: tuple[str, list[dict[str, Any]]]) -> None:
         """
         Only event types defined in §5 may appear in a run.
         The §5 vocabulary is fixed by contract (ARCHITECTURE.md).
@@ -433,6 +413,7 @@ class TestEventSequence:
         # If backend batches simulate.tick, remove this assertion and document why.
         if tick_count != score_count:
             import warnings
+
             warnings.warn(
                 f"Run {run_id}: simulate.tick count ({tick_count}) != "
                 f"score.emit count ({score_count}). "
@@ -446,6 +427,7 @@ class TestEventSequence:
 # SSE streaming validation
 # Separate from the class above — tests the streaming endpoint directly.
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.integration
 def test_sse_endpoint_emits_events_in_real_time() -> None:

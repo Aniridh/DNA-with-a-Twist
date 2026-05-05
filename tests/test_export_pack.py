@@ -32,13 +32,14 @@ Failure protocol:
   If test_declared_sha256_matches_zip_bytes fails, the export endpoint is
   returning a stale or pre-computed hash — P0, blocks demo. Do not xfail.
 """
+
 import hashlib
 import io
 import json
 import os
 import re
 import zipfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -54,55 +55,65 @@ SAMPLE_FASTA = Path(__file__).parent / "fixtures" / "BCL11A_enhancer.fasta"
 SAMPLE_PROMPT = "Disrupt GATA1 binding site at +58 enhancer"
 
 # Required top-level entries in the zip (§7 Layer 5).
-REQUIRED_ZIP_FILES = frozenset({
-    "manifest.json",
-    "research_object.json",
-    "prediction.json",
-    "events.jsonl",
-})
+REQUIRED_ZIP_FILES = frozenset(
+    {
+        "manifest.json",
+        "research_object.json",
+        "prediction.json",
+        "events.jsonl",
+    }
+)
 
 # Required RunManifest fields (§3).
-REQUIRED_MANIFEST_FIELDS = frozenset({
-    "git_sha",
-    "api_version",
-    "scoring_versions",
-    "started_at",
-    "env_fingerprint",
-})
+REQUIRED_MANIFEST_FIELDS = frozenset(
+    {
+        "git_sha",
+        "api_version",
+        "scoring_versions",
+        "started_at",
+        "env_fingerprint",
+    }
+)
 
 # Required ResearchObject fields (§3, including fastq_sha256 enumerated in docs PR #6).
-REQUIRED_RO_FIELDS = frozenset({
-    "id",
-    "content_hash",
-    "backbone_ref",
-    "backbone_sha256",
-    "pam",
-    "metadata",
-    "created_at",
-    "created_by",
-})
+REQUIRED_RO_FIELDS = frozenset(
+    {
+        "id",
+        "content_hash",
+        "backbone_ref",
+        "backbone_sha256",
+        "pam",
+        "metadata",
+        "created_at",
+        "created_by",
+    }
+)
 
 # Required GuideCandidate fields (§3).
-REQUIRED_GUIDE_FIELDS = frozenset({
-    "sequence",
-    "pam",
-    "position",
-    "strand",
-    "on_target_score",
-    "off_target_count",
-    "off_target_top_hits",
-    "bystander_warnings",
-})
+REQUIRED_GUIDE_FIELDS = frozenset(
+    {
+        "sequence",
+        "pam",
+        "position",
+        "strand",
+        "on_target_score",
+        "off_target_count",
+        "off_target_top_hits",
+        "bystander_warnings",
+    }
+)
 
 # Required ProvenanceEvent fields (§3).
-REQUIRED_EVENT_FIELDS = frozenset({
-    "id",
-    "run_id",
-    "seq",
-    "event_type",
-    "payload",
-    "emitted_at",
-})
+REQUIRED_EVENT_FIELDS = frozenset(
+    {
+        "id",
+        "run_id",
+        "seq",
+        "event_type",
+        "payload",
+        "emitted_at",
+    }
+)
 
 # Valid DNA bases for guide sequence validation.
 _VALID_BASES = frozenset("ACGT")
@@ -112,6 +123,7 @@ _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _run_to_completion(client: httpx.Client) -> tuple[str, str]:
     """Upload FASTA → create RO → start run → poll to done. Returns (run_id, ro_id)."""
@@ -179,6 +191,7 @@ def _open_zip(zip_bytes: bytes) -> dict[str, bytes]:
 # Shared fixture — one completed run, one export pack
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture(scope="module")
 def http_client() -> httpx.Client:
     return httpx.Client(base_url=BASE_URL, timeout=130.0)
@@ -207,22 +220,21 @@ def export_context(http_client: httpx.Client) -> dict[str, Any]:
 # 1. Zip structural integrity
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.integration
 class TestZipStructure:
-
     def test_required_files_present(self, export_context: dict[str, Any]) -> None:
         """All four required top-level files must be in the zip."""
         pack = export_context["pack"]
         missing = REQUIRED_ZIP_FILES - set(pack.keys())
         assert not missing, (
-            f"Export pack missing required files: {missing}. "
-            f"Present: {sorted(pack.keys())}"
+            f"Export pack missing required files: {missing}. Present: {sorted(pack.keys())}"
         )
 
     def test_inputs_directory_present(self, export_context: dict[str, Any]) -> None:
         """inputs/ directory must exist and contain at least the backbone FASTA."""
         pack = export_context["pack"]
-        inputs_entries = [k for k in pack.keys() if k.startswith("inputs/") and k != "inputs/"]
+        inputs_entries = [k for k in pack if k.startswith("inputs/") and k != "inputs/"]
         assert inputs_entries, (
             "inputs/ directory is empty or absent in the export pack. "
             "§7 Layer 5 requires copies of original FASTA/FASTQ/PDB."
@@ -234,9 +246,10 @@ class TestZipStructure:
         Unexpected files indicate a packaging bug or sensitive data leak.
         """
         pack = export_context["pack"]
-        allowed_prefixes = REQUIRED_ZIP_FILES | {"inputs/"}
+        REQUIRED_ZIP_FILES | {"inputs/"}
         unexpected = [
-            k for k in pack.keys()
+            k
+            for k in pack
             if not any(k == f or k.startswith("inputs/") for f in REQUIRED_ZIP_FILES)
             and not k.startswith("inputs/")
         ]
@@ -252,9 +265,9 @@ class TestZipStructure:
 # 2. SHA-256 verification — P0 test
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.integration
 class TestSha256:
-
     def test_declared_sha256_matches_zip_bytes(self, export_context: dict[str, Any]) -> None:
         """
         sha256(zip bytes) must equal the sha256 value in the API response.
@@ -274,11 +287,11 @@ class TestSha256:
     def test_sha256_is_64_char_lowercase_hex(self, export_context: dict[str, Any]) -> None:
         """sha256 field in the API response must be valid 64-char lowercase hex."""
         declared = export_context["export_meta"]["sha256"]
-        assert _SHA256_RE.match(declared), (
-            f"Export sha256 is not valid lowercase hex: {declared!r}"
-        )
+        assert _SHA256_RE.match(declared), f"Export sha256 is not valid lowercase hex: {declared!r}"
 
-    def test_idempotent_sha256_across_calls(self, http_client: httpx.Client, export_context: dict[str, Any]) -> None:
+    def test_idempotent_sha256_across_calls(
+        self, http_client: httpx.Client, export_context: dict[str, Any]
+    ) -> None:
         """
         Two calls to GET /api/v1/runs/:id/export must return the same sha256.
         The pack is pre-built; it must not be rebuilt on every request with
@@ -304,14 +317,18 @@ class TestSha256:
 # 3. inputs/ — file integrity
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.integration
 class TestInputsDirectory:
-
     def test_backbone_fasta_present_in_inputs(self, export_context: dict[str, Any]) -> None:
         """inputs/ must contain the backbone FASTA (or a file with a FASTA extension)."""
         pack = export_context["pack"]
-        fasta_entries = [k for k in pack.keys() if k.startswith("inputs/") and
-                         (k.endswith(".fasta") or k.endswith(".fa") or k.endswith(".fastq"))]
+        fasta_entries = [
+            k
+            for k in pack
+            if k.startswith("inputs/")
+            and (k.endswith(".fasta") or k.endswith(".fa") or k.endswith(".fastq"))
+        ]
         assert fasta_entries, (
             "No FASTA/FASTQ file found under inputs/ in the export pack. "
             "§7 Layer 5 requires 'copies of original FASTA/FASTQ/PDB'."
@@ -329,8 +346,11 @@ class TestInputsDirectory:
         assert declared_backbone_sha, "research_object.json missing backbone_sha256"
 
         # Find the backbone file — assume the largest FASTA-like file in inputs/.
-        fasta_entries = [k for k in pack.keys() if k.startswith("inputs/") and
-                         (k.endswith(".fasta") or k.endswith(".fa"))]
+        fasta_entries = [
+            k
+            for k in pack
+            if k.startswith("inputs/") and (k.endswith(".fasta") or k.endswith(".fa"))
+        ]
         if not fasta_entries:
             pytest.skip("No .fasta file in inputs/ — cannot verify backbone sha256")
 
@@ -351,9 +371,9 @@ class TestInputsDirectory:
 # 4. manifest.json — RunManifest structure
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.integration
 class TestManifestJson:
-
     def test_manifest_is_valid_json(self, export_context: dict[str, Any]) -> None:
         raw = export_context["pack"]["manifest.json"]
         try:
@@ -376,7 +396,9 @@ class TestManifestJson:
             "backend code revision — this is what allows reproducibility audits."
         )
 
-    def test_manifest_scoring_versions_has_expected_keys(self, export_context: dict[str, Any]) -> None:
+    def test_manifest_scoring_versions_has_expected_keys(
+        self, export_context: dict[str, Any]
+    ) -> None:
         """scoring_versions must record versions for every scoring module in use."""
         manifest = json.loads(export_context["pack"]["manifest.json"])
         sv = manifest.get("scoring_versions", {})
@@ -384,14 +406,13 @@ class TestManifestJson:
         required_scorers = {"doench_rs2", "cfd"}
         missing = required_scorers - set(sv.keys())
         assert not missing, (
-            f"manifest.json scoring_versions missing entries for: {missing}. "
-            f"Present: {sv}"
+            f"manifest.json scoring_versions missing entries for: {missing}. Present: {sv}"
         )
         for name, version in sv.items():
             assert version, f"scoring_versions[{name!r}] is empty"
 
     def test_manifest_env_fingerprint_is_sha256(self, export_context: dict[str, Any]) -> None:
-        """env_fingerprint must be a 64-char lowercase hex SHA-256 (per coordinator ruling: sha256 of uv.lock)."""
+        """env_fingerprint must be a 64-char lowercase hex SHA-256 (sha256 of uv.lock)."""
         manifest = json.loads(export_context["pack"]["manifest.json"])
         fp = manifest.get("env_fingerprint", "")
         assert _SHA256_RE.match(fp), (
@@ -418,9 +439,9 @@ class TestManifestJson:
 # 5. research_object.json — ResearchObject structure
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.integration
 class TestResearchObjectJson:
-
     def test_ro_is_valid_json(self, export_context: dict[str, Any]) -> None:
         raw = export_context["pack"]["research_object.json"]
         try:
@@ -490,7 +511,9 @@ class TestResearchObjectJson:
             "canonical.py is non-deterministic in the export path."
         )
 
-    def test_ro_in_pack_matches_api(self, http_client: httpx.Client, export_context: dict[str, Any]) -> None:
+    def test_ro_in_pack_matches_api(
+        self, http_client: httpx.Client, export_context: dict[str, Any]
+    ) -> None:
         """
         research_object.json in the pack must be identical to
         GET /api/v1/research-objects/:id.
@@ -516,9 +539,9 @@ class TestResearchObjectJson:
 # 6. prediction.json — PredictionPayload + GuideCandidate structure
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.integration
 class TestPredictionJson:
-
     def test_prediction_is_valid_json(self, export_context: dict[str, Any]) -> None:
         raw = export_context["pack"]["prediction.json"]
         try:
@@ -546,9 +569,7 @@ class TestPredictionJson:
         pred = json.loads(export_context["pack"]["prediction.json"])
         for i, guide in enumerate(pred["guides"]):
             missing = REQUIRED_GUIDE_FIELDS - set(guide.keys())
-            assert not missing, (
-                f"Guide #{i} missing fields: {missing}. Full guide: {guide}"
-            )
+            assert not missing, f"Guide #{i} missing fields: {missing}. Full guide: {guide}"
 
     def test_guide_sequences_are_20nt(self, export_context: dict[str, Any]) -> None:
         """Guide sequences must be exactly 20 nucleotides (§3 GuideCandidate)."""
@@ -560,8 +581,7 @@ class TestPredictionJson:
             )
             invalid_bases = set(seq.upper()) - _VALID_BASES
             assert not invalid_bases, (
-                f"Guide #{i} sequence contains invalid bases: {invalid_bases}. "
-                f"Sequence: {seq!r}"
+                f"Guide #{i} sequence contains invalid bases: {invalid_bases}. Sequence: {seq!r}"
             )
 
     def test_guide_pam_is_3nt(self, export_context: dict[str, Any]) -> None:
@@ -592,9 +612,7 @@ class TestPredictionJson:
         pred = json.loads(export_context["pack"]["prediction.json"])
         for i, guide in enumerate(pred["guides"]):
             strand = guide.get("strand")
-            assert strand in ("+", "-"), (
-                f"Guide #{i} strand is {strand!r}, expected '+' or '-'."
-            )
+            assert strand in ("+", "-"), f"Guide #{i} strand is {strand!r}, expected '+' or '-'."
 
     def test_off_target_top_hits_is_list(self, export_context: dict[str, Any]) -> None:
         pred = json.loads(export_context["pack"]["prediction.json"])
@@ -612,7 +630,9 @@ class TestPredictionJson:
                 f"Guide #{i} bystander_warnings is {type(warnings_)}, expected list."
             )
 
-    def test_prediction_matches_api_result(self, http_client: httpx.Client, export_context: dict[str, Any]) -> None:
+    def test_prediction_matches_api_result(
+        self, http_client: httpx.Client, export_context: dict[str, Any]
+    ) -> None:
         """
         prediction.json in the pack must equal GET /api/v1/runs/:id/result
         (specifically Result.prediction).
@@ -658,22 +678,22 @@ class TestPredictionJson:
 # 7. events.jsonl — ProvenanceEvent structure + ordering
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.integration
 class TestEventsJsonl:
-
     def _parse_events(self, raw: bytes) -> list[dict[str, Any]]:
-        lines = [l.strip() for l in raw.decode("utf-8").splitlines() if l.strip()]
+        lines = [ln.strip() for ln in raw.decode("utf-8").splitlines() if ln.strip()]
         return [json.loads(line) for line in lines]
 
     def test_events_jsonl_every_line_valid_json(self, export_context: dict[str, Any]) -> None:
         raw = export_context["pack"]["events.jsonl"]
-        lines = [l.strip() for l in raw.decode("utf-8").splitlines() if l.strip()]
+        lines = [ln.strip() for ln in raw.decode("utf-8").splitlines() if ln.strip()]
         assert lines, "events.jsonl is empty — at least 5 events are required"
         for i, line in enumerate(lines):
             try:
                 json.loads(line)
             except json.JSONDecodeError as exc:
-                pytest.fail(f"events.jsonl line {i+1} is not valid JSON: {exc}\nLine: {line!r}")
+                pytest.fail(f"events.jsonl line {i + 1} is not valid JSON: {exc}\nLine: {line!r}")
 
     def test_events_in_seq_order(self, export_context: dict[str, Any]) -> None:
         """events.jsonl must be written in seq order (ascending). Not sorted post-hoc."""
@@ -681,8 +701,7 @@ class TestEventsJsonl:
         events = self._parse_events(raw)
         seqs = [e["seq"] for e in events]
         assert seqs == sorted(seqs), (
-            f"events.jsonl is not in seq order: {seqs}. "
-            "§7 Layer 5 specifies 'in seq order'."
+            f"events.jsonl is not in seq order: {seqs}. §7 Layer 5 specifies 'in seq order'."
         )
 
     def test_events_seq_gap_free(self, export_context: dict[str, Any]) -> None:
@@ -691,9 +710,7 @@ class TestEventsJsonl:
         seqs = [e["seq"] for e in events]
         expected = list(range(1, len(seqs) + 1))
         assert seqs == expected, (
-            f"events.jsonl seq values are not gap-free.\n"
-            f"  Expected: {expected}\n"
-            f"  Actual:   {seqs}"
+            f"events.jsonl seq values are not gap-free.\n  Expected: {expected}\n  Actual:   {seqs}"
         )
 
     def test_events_have_required_fields(self, export_context: dict[str, Any]) -> None:
@@ -702,16 +719,13 @@ class TestEventsJsonl:
         for event in events:
             missing = REQUIRED_EVENT_FIELDS - set(event.keys())
             assert not missing, (
-                f"Event seq={event.get('seq')} missing fields: {missing}. "
-                f"Full event: {event}"
+                f"Event seq={event.get('seq')} missing fields: {missing}. Full event: {event}"
             )
 
     def test_minimum_event_count(self, export_context: dict[str, Any]) -> None:
         raw = export_context["pack"]["events.jsonl"]
         events = self._parse_events(raw)
-        assert len(events) >= 5, (
-            f"events.jsonl has {len(events)} event(s); §9 requires ≥5 per run."
-        )
+        assert len(events) >= 5, f"events.jsonl has {len(events)} event(s); §9 requires ≥5 per run."
 
     def test_events_run_id_consistent(self, export_context: dict[str, Any]) -> None:
         """All events must belong to the same run."""
@@ -729,9 +743,9 @@ class TestEventsJsonl:
 # 8. Signed URL properties
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.integration
 class TestSignedUrl:
-
     def test_expires_at_is_approximately_one_hour(self, export_context: dict[str, Any]) -> None:
         """
         expires_at must be approximately now + 1 hour (§7 Layer 5: "signed URL with 1h expiry").
@@ -743,7 +757,7 @@ class TestSignedUrl:
         except ValueError:
             pytest.fail(f"expires_at is not valid ISO-8601: {expires_str!r}")
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         delta_minutes = (expires - now).total_seconds() / 60
 
         assert 50 <= delta_minutes <= 70, (
@@ -756,9 +770,7 @@ class TestSignedUrl:
         """The signed URL must return 200 and a zip file when fetched."""
         url = export_context["export_meta"]["url"]
         resp = httpx.get(url, follow_redirects=True, timeout=30.0)
-        assert resp.status_code == 200, (
-            f"Signed URL returned {resp.status_code}. URL: {url!r}"
-        )
+        assert resp.status_code == 200, f"Signed URL returned {resp.status_code}. URL: {url!r}"
         content_type = resp.headers.get("content-type", "")
         # Supabase storage may return application/zip, application/octet-stream,
         # or binary/octet-stream depending on bucket config.

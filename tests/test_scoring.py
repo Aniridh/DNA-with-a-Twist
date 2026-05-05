@@ -5,13 +5,21 @@ These are structural/contract tests: determinism, range [0,1], interface
 shape, and biological sanity checks. Reference-value tests against exact
 Doench 2016 paper values belong in test_doench_rs2_reference.py (reviewer owns).
 """
+
 import pytest
 
 try:
-    from scoring.pam import PamHit, scan  # type: ignore[import-untyped]
-    from scoring.doench_rs2 import score, __version__ as rs2_version, weights_sha256  # type: ignore[import-untyped]
+    from scoring.cfd import (  # type: ignore[import-untyped]
+        OffTargetHit,
+        cfd_score,
+        scan_off_targets,
+    )
+    from scoring.cfd import __version__ as cfd_version
+    from scoring.doench_rs2 import __version__ as rs2_version
+    from scoring.doench_rs2 import score, weights_sha256  # type: ignore[import-untyped]
     from scoring.doench_rs2_weights import __weights_sha256__  # type: ignore[import-untyped]
-    from scoring.cfd import cfd_score, scan_off_targets, OffTargetHit, __version__ as cfd_version  # type: ignore[import-untyped]
+    from scoring.pam import PamHit, scan  # type: ignore[import-untyped]
+
     _AVAILABLE = True
 except ImportError:
     _AVAILABLE = False
@@ -87,21 +95,23 @@ def test_rs2_deterministic() -> None:
 def test_rs2_gc_polynomial_optimum_in_range() -> None:
     """GC quadratic term peaks between 40% and 75% (Doench 2016 Fig. 2b)."""
     from scoring.doench_rs2_weights import GC_COEFF_LINEAR, GC_COEFF_QUAD
+
     # Optimum of a*x + b*x² at x* = -a / (2b)
     x_opt = -GC_COEFF_LINEAR / (2.0 * GC_COEFF_QUAD)
     assert 0.40 <= x_opt <= 0.75
+
 
 def test_rs2_zero_gc_scores_low() -> None:
     """0% GC guide (all A/T) scores below the 50% GC guide with same A:T ratio."""
     # Control sequence: same nucleotide order but more balanced
     all_at = "ATATATATATATATATATATATA"[:20]  # 0% GC
-    balanced = _GUIDE_20                    # 50% GC
+    balanced = _GUIDE_20  # 50% GC
     # The 0% GC guide will be harshly penalised by both GC term and T position weights
     assert score(balanced) > score(all_at)
 
 
 def test_rs2_poly_t_penalty() -> None:
-    poly_t = "ATGCATTTTTGCATGCATGC"   # contains TTTT
+    poly_t = "ATGCATTTTTGCATGCATGC"  # contains TTTT
     no_poly = "ATGCATCATGCATGCATGC" + "A"
     assert score(poly_t) < score(no_poly)
 
@@ -121,7 +131,7 @@ def test_rs2_version_string() -> None:
 
 
 def test_rs2_weights_sha256_exposed() -> None:
-    assert len(weights_sha256) == 64   # SHA-256 hex = 64 chars
+    assert len(weights_sha256) == 64  # SHA-256 hex = 64 chars
     assert weights_sha256 == __weights_sha256__
 
 

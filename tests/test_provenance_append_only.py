@@ -18,9 +18,11 @@ Failure protocol:
   that is a P0 — the append-only guarantee is gone. Do not xfail. Find and
   revert the migration or code that removed the enforcement.
 """
+
+import contextlib
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
@@ -36,7 +38,8 @@ SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
 _supabase_configured = bool(SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)
 
 try:
-    from supabase import create_client, Client  # type: ignore[import-untyped]
+    from supabase import Client, create_client  # type: ignore[import-untyped]  # noqa: I001
+
     _supabase_importable = True
 except ImportError:
     _supabase_importable = False
@@ -54,6 +57,7 @@ pytestmark = pytest.mark.skipif(
 # ─────────────────────────────────────────────────────────────────────────────
 # Fixtures
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @pytest.fixture(scope="module")
 def service_client() -> "Client":
@@ -88,35 +92,53 @@ def seed_run_and_event(service_client: "Client") -> dict[str, Any]:
     event_id = str(uuid.uuid4())
 
     # 1. Stub ResearchObject row — satisfies runs.ro_id FK.
-    ro_insert = service_client.table("research_objects").insert({
-        "id": ro_id,
-        "content_hash": "a" * 64,          # placeholder SHA-256 hex
-        "backbone_ref": {"bucket": "test", "path": "fixture.fasta"},
-        "backbone_sha256": "b" * 64,        # placeholder SHA-256 hex
-        "pam": "NGG",
-        "metadata": {},
-        "created_by": str(uuid.uuid4()),    # placeholder user UUID
-    }).execute()
+    ro_insert = (
+        service_client.table("research_objects")
+        .insert(
+            {
+                "id": ro_id,
+                "content_hash": "a" * 64,  # placeholder SHA-256 hex
+                "backbone_ref": {"bucket": "test", "path": "fixture.fasta"},
+                "backbone_sha256": "b" * 64,  # placeholder SHA-256 hex
+                "pam": "NGG",
+                "metadata": {},
+                "created_by": str(uuid.uuid4()),  # placeholder user UUID
+            }
+        )
+        .execute()
+    )
     assert ro_insert.data, f"Failed to insert stub research_object: {ro_insert}"
 
     # 2. Run row referencing the stub RO.
-    run_insert = service_client.table("runs").insert({
-        "id": run_id,
-        "ro_id": ro_id,
-        "prompt": "test fixture — append-only spec",
-        "status": "done",
-    }).execute()
+    run_insert = (
+        service_client.table("runs")
+        .insert(
+            {
+                "id": run_id,
+                "ro_id": ro_id,
+                "prompt": "test fixture — append-only spec",
+                "status": "done",
+            }
+        )
+        .execute()
+    )
     assert run_insert.data, f"Failed to insert seed run: {run_insert}"
 
     # 3. Provenance event row referencing the run.
-    event_insert = service_client.table("provenance_events").insert({
-        "id": event_id,
-        "run_id": run_id,
-        "seq": 1,
-        "event_type": "run.preflight.ok",
-        "payload": {"fixture": "append_only_spec"},
-        "emitted_at": datetime.now(timezone.utc).isoformat(),
-    }).execute()
+    event_insert = (
+        service_client.table("provenance_events")
+        .insert(
+            {
+                "id": event_id,
+                "run_id": run_id,
+                "seq": 1,
+                "event_type": "run.preflight.ok",
+                "payload": {"fixture": "append_only_spec"},
+                "emitted_at": datetime.now(UTC).isoformat(),
+            }
+        )
+        .execute()
+    )
     assert event_insert.data, f"Failed to insert seed event: {event_insert}"
 
     yield {"ro_id": ro_id, "run_id": run_id, "event_id": event_id, "event_seq": 1}
@@ -130,31 +152,39 @@ def seed_run_and_event(service_client: "Client") -> dict[str, Any]:
         ("runs", "id", run_id),
         ("research_objects", "id", ro_id),
     ]:
-        try:
+        with contextlib.suppress(Exception):
+            # Best-effort; test project reset handles residual rows.
             service_client.table(table).delete().eq(col, val).execute()
-        except Exception:
-            pass  # Best-effort; test project reset handles residual rows.
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # INSERT — must succeed (baseline, proves fixture is working)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.integration
-def test_insert_event_succeeds(service_client: "Client", seed_run_and_event: dict[str, Any]) -> None:
+def test_insert_event_succeeds(
+    service_client: "Client", seed_run_and_event: dict[str, Any]
+) -> None:
     """
     Appending a new event to an existing run must succeed.
     This is the baseline — if INSERT fails, all other tests are meaningless.
     """
     new_event_id = str(uuid.uuid4())
-    result = service_client.table("provenance_events").insert({
-        "id": new_event_id,
-        "run_id": seed_run_and_event["run_id"],
-        "seq": 2,
-        "event_type": "run.extract.features",
-        "payload": {"fixture": "append_only_spec_seq2"},
-        "emitted_at": datetime.now(timezone.utc).isoformat(),
-    }).execute()
+    result = (
+        service_client.table("provenance_events")
+        .insert(
+            {
+                "id": new_event_id,
+                "run_id": seed_run_and_event["run_id"],
+                "seq": 2,
+                "event_type": "run.extract.features",
+                "payload": {"fixture": "append_only_spec_seq2"},
+                "emitted_at": datetime.now(UTC).isoformat(),
+            }
+        )
+        .execute()
+    )
     assert result.data, (
         f"INSERT into provenance_events failed — baseline broken: {result}. "
         "Fix the RLS INSERT policy before debugging UPDATE/DELETE enforcement."
@@ -166,6 +196,7 @@ def test_insert_event_succeeds(service_client: "Client", seed_run_and_event: dic
 # ─────────────────────────────────────────────────────────────────────────────
 # UPDATE — must be rejected at the database level
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.integration
 class TestUpdateRejected:
@@ -187,9 +218,12 @@ class TestUpdateRejected:
         """
         event_id = seed_run_and_event["event_id"]
         try:
-            result = anon_client.table("provenance_events").update(
-                {"payload": {"tampered": True}}
-            ).eq("id", event_id).execute()
+            result = (
+                anon_client.table("provenance_events")
+                .update({"payload": {"tampered": True}})
+                .eq("id", event_id)
+                .execute()
+            )
 
             # If we get here, the update either affected rows or returned empty.
             # Empty result (0 rows affected) can mean RLS filtered the row — that's
@@ -201,7 +235,7 @@ class TestUpdateRejected:
                 "Add a BEFORE UPDATE trigger that raises an exception, or a RLS policy "
                 "that has no UPDATE rule."
             )
-        except Exception as exc:
+        except Exception:
             # An exception is the preferred outcome — the trigger raised or RLS rejected.
             # Any exception here means enforcement is working.
             pass  # Enforcement is working.
@@ -214,9 +248,12 @@ class TestUpdateRejected:
         """Changing the event_type must also be blocked."""
         event_id = seed_run_and_event["event_id"]
         try:
-            result = anon_client.table("provenance_events").update(
-                {"event_type": "tampered.event.type"}
-            ).eq("id", event_id).execute()
+            result = (
+                anon_client.table("provenance_events")
+                .update({"event_type": "tampered.event.type"})
+                .eq("id", event_id)
+                .execute()
+            )
             affected = len(result.data) if result.data else 0
             assert affected == 0, (
                 f"UPDATE of event_type via anon client succeeded ({affected} rows). "
@@ -233,9 +270,12 @@ class TestUpdateRejected:
         """Seq reordering must also be blocked — gaps or reordering destroys the audit trail."""
         event_id = seed_run_and_event["event_id"]
         try:
-            result = anon_client.table("provenance_events").update(
-                {"seq": 999}
-            ).eq("id", event_id).execute()
+            result = (
+                anon_client.table("provenance_events")
+                .update({"seq": 999})
+                .eq("id", event_id)
+                .execute()
+            )
             affected = len(result.data) if result.data else 0
             assert affected == 0, (
                 f"UPDATE of seq via anon client succeeded ({affected} rows). "
@@ -261,19 +301,25 @@ class TestUpdateRejected:
         """
         event_id = seed_run_and_event["event_id"]
         # Read original value.
-        before = service_client.table("provenance_events").select("payload").eq("id", event_id).execute()
+        before = (
+            service_client.table("provenance_events").select("payload").eq("id", event_id).execute()
+        )
         original_payload = before.data[0]["payload"] if before.data else None
 
         try:
-            result = service_client.table("provenance_events").update(
-                {"payload": {"service_role_probe": True}}
-            ).eq("id", event_id).execute()
+            result = (
+                service_client.table("provenance_events")
+                .update({"payload": {"service_role_probe": True}})
+                .eq("id", event_id)
+                .execute()
+            )
             affected = len(result.data) if result.data else 0
 
             if affected > 0:
                 # Service role UPDATE succeeded — acceptable ONLY if trigger-based
                 # enforcement is not in place. Log a warning and restore the original value.
                 import warnings
+
                 warnings.warn(
                     "Service-role UPDATE on provenance_events succeeded. "
                     "This means enforcement is RLS-only (not trigger-based). "
@@ -294,6 +340,7 @@ class TestUpdateRejected:
 # ─────────────────────────────────────────────────────────────────────────────
 # DELETE — must be rejected at the database level
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.integration
 class TestDeleteRejected:
@@ -352,13 +399,15 @@ class TestDeleteRejected:
         result = service_client.table("provenance_events").select("id").eq("id", event_id).execute()
         assert result.data and len(result.data) == 1, (
             f"Seed event {event_id} is missing from provenance_events after DELETE attempt tests. "
-            "Either the DELETE succeeded (enforcement is broken) or the fixture failed to insert it."
+            "Either the DELETE succeeded (enforcement is broken) or the fixture "
+            "failed to insert it."
         )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TRUNCATE — document that it must also be blocked
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.integration
 def test_truncate_not_possible_via_client(anon_client: "Client") -> None:

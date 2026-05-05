@@ -5,11 +5,12 @@ Mocks Supabase auth, storage, and DB so tests run without a live Supabase
 instance. Each test covers either a happy path or a structured validation
 failure — never raw 500s.
 """
+
 import hashlib
 import io
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -56,7 +57,12 @@ def _fastq_low_qual(seq: str = "ATGCATGCATGCATGC") -> bytes:
 
 def _mock_upload(monkeypatch: Any) -> MagicMock:
     """Patch ingestion.storage.upload_bytes so no real Supabase call happens."""
-    mock = MagicMock(return_value=("aaaa-bbbb", MagicMock(bucket="inputs", path=f"{_FAKE_USER}/aaaa-bbbb/upload")))
+    mock = MagicMock(
+        return_value=(
+            "aaaa-bbbb",
+            MagicMock(bucket="inputs", path=f"{_FAKE_USER}/aaaa-bbbb/upload"),
+        )
+    )
     monkeypatch.setattr("routers.uploads.upload_bytes", mock)
     return mock
 
@@ -121,8 +127,7 @@ def test_upload_pdb_by_id(monkeypatch: Any) -> None:
     _mock_db(monkeypatch)
 
     minimal_pdb = (
-        b"ATOM      1  CA  ALA A   1       1.000   1.000   1.000  1.00  0.00           C\n"
-        b"END\n"
+        b"ATOM      1  CA  ALA A   1       1.000   1.000   1.000  1.00  0.00           C\nEND\n"
     )
     monkeypatch.setattr("routers.uploads.fetch_rcsb", lambda _id: minimal_pdb)
     monkeypatch.setattr("routers.uploads.validate_pdb", lambda _data: MagicMock())

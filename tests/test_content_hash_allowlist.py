@@ -11,6 +11,7 @@ Mutations to any included field MUST change the content_hash.
 These tests lock the allowlist. Any PR that changes which fields enter
 the hash must update ARCHITECTURE.md §6 first, then update these tests.
 """
+
 import hashlib
 
 import pytest
@@ -54,13 +55,13 @@ _BASE_HASH = compute_content_hash(**_BASE_HASH_KWARGS) if AVAILABLE else ""
 
 def test_allowlist_has_exactly_five_fields() -> None:
     """Guard: changing CONTENT_HASH_FIELDS size requires updating this test."""
-    assert CONTENT_HASH_FIELDS == {
+    assert {
         "backbone_sha256",
         "target_pdb_sha256",
         "fastq_sha256",
         "pam",
         "metadata",
-    }, (
+    } == CONTENT_HASH_FIELDS, (
         "CONTENT_HASH_FIELDS has changed. A change to the hash field set "
         "requires an ARCHITECTURE.md §6 PR first, then update this test."
     )

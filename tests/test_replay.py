@@ -16,9 +16,15 @@ If test_prediction_json_byte_identical or test_research_object_json_byte_identic
 ever FLAKES, that is a P0 determinism break — do not retry, do not mark xfail,
 find the PR that introduced non-determinism and revert it.
 """
+
 import hashlib
 import io
 import json
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Configuration — override via environment variables in CI
+# ─────────────────────────────────────────────────────────────────────────────
+import os
 import time
 import zipfile
 from pathlib import Path
@@ -26,11 +32,6 @@ from typing import Any
 
 import httpx
 import pytest
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Configuration — override via environment variables in CI
-# ─────────────────────────────────────────────────────────────────────────────
-import os
 
 BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:8000")
 SAMPLE_FASTA = Path(__file__).parent / "fixtures" / "BCL11A_enhancer.fasta"
@@ -49,6 +50,7 @@ REPLAY_UNSTABLE: frozenset[str] = frozenset({"manifest.json", "events.jsonl"})
 # ─────────────────────────────────────────────────────────────────────────────
 # Low-level HTTP helpers
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _upload_fasta(client: httpx.Client) -> str:
     """Upload the sample FASTA fixture. Returns file_id."""
@@ -141,6 +143,7 @@ def _fetch_export_pack(client: httpx.Client, run_id: str) -> dict[str, bytes]:
 # Shared class fixture — one RO, two runs, shared across all tests in the class
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.integration
 class TestReplayDeterminism:
     """
@@ -185,9 +188,7 @@ class TestReplayDeterminism:
         )
 
         run2 = _wait_for_run(http_client, run2_id)
-        assert run2["status"] == "done", (
-            f"Replay run {run2_id} failed: {run2}."
-        )
+        assert run2["status"] == "done", f"Replay run {run2_id} failed: {run2}."
 
         # 4. Fetch both export packs (SHA-256 verified inside _fetch_export_pack)
         pack1 = _fetch_export_pack(http_client, run1_id)
@@ -280,7 +281,8 @@ class TestReplayDeterminism:
             f"Diverging fields: { {k for k in set(ro1) | set(ro2) if ro1.get(k) != ro2.get(k)} }"
         )
         assert r1 == r2, (
-            "research_object.json parses identically but bytes differ — canonical serialization issue."
+            "research_object.json parses identically but bytes differ — "
+            "canonical serialization issue."
         )
 
     def test_manifest_and_events_legitimately_differ(self, run_pair: dict[str, Any]) -> None:
@@ -326,9 +328,7 @@ class TestReplayDeterminism:
         required = {"manifest.json", "research_object.json", "prediction.json", "events.jsonl"}
         for label, pack in [("original", run_pair["pack1"]), ("replay", run_pair["pack2"])]:
             missing = required - set(pack.keys())
-            assert not missing, (
-                f"Export pack for {label} run is missing files: {missing}"
-            )
+            assert not missing, f"Export pack for {label} run is missing files: {missing}"
 
     def test_manifest_contains_git_sha(self, run_pair: dict[str, Any]) -> None:
         """Manifest must record the backend git SHA for reproducibility."""
@@ -346,7 +346,7 @@ class TestReplayDeterminism:
             raw = pack.get("events.jsonl")
             if raw is None:
                 pytest.skip("events.jsonl not in export pack")
-            lines = [l.strip() for l in raw.decode("utf-8").splitlines() if l.strip()]
+            lines = [ln.strip() for ln in raw.decode("utf-8").splitlines() if ln.strip()]
             assert len(lines) >= 5, (
                 f"{label} run has {len(lines)} events, minimum is 5 (ARCHITECTURE.md §5)"
             )
@@ -383,9 +383,7 @@ class TestReplayDeterminism:
             "pam": ro["pam"],
             "metadata": ro["metadata"],
         }
-        expected_hash = hashlib.sha256(
-            canonical_json(bundle).encode("utf-8")
-        ).hexdigest()
+        expected_hash = hashlib.sha256(canonical_json(bundle).encode("utf-8")).hexdigest()
 
         assert ro["content_hash"] == expected_hash, (
             f"content_hash mismatch. Declared: {ro['content_hash']!r}, "
@@ -413,25 +411,25 @@ class TestReplayDeterminism:
         p_original = run_pair["pack1"].get("prediction.json")
         p_different = pack.get("prediction.json")
 
-        if p_original and p_different:
+        if p_original and p_different and p_original == p_different:
             # May or may not differ depending on how prompt affects scoring.
             # Log but don't fail — this is a sanity probe, not a hard contract.
-            if p_original == p_different:
-                import warnings
-                warnings.warn(
-                    "prediction.json is identical for two different prompts on the "
-                    "same RO. Verify the prompt is actually influencing the prediction.",
-                    stacklevel=1,
-                )
+            import warnings
+
+            warnings.warn(
+                "prediction.json is identical for two different prompts on the "
+                "same RO. Verify the prompt is actually influencing the prediction.",
+                stacklevel=1,
+            )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Edge cases and error handling
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.integration
 class TestReplayEdgeCases:
-
     @pytest.fixture
     def http_client(self) -> httpx.Client:
         return httpx.Client(base_url=BASE_URL, timeout=130.0)

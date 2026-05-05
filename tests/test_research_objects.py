@@ -5,11 +5,12 @@ Mocks Supabase DB calls so tests run without a live instance.
 Verifies: content_hash computation, upload lookup, immutability (409 on dup),
 ownership check, and wrong-kind guard.
 """
+
 import hashlib
 import json
 import unicodedata
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -89,7 +90,10 @@ def _expected_hash(
         "target_pdb_sha256": target_pdb_sha256,
     }
     canonical = json.dumps(
-        {k: (unicodedata.normalize("NFC", v) if isinstance(v, str) else v) for k, v in sorted(bundle.items())},
+        {
+            k: (unicodedata.normalize("NFC", v) if isinstance(v, str) else v)
+            for k, v in sorted(bundle.items())
+        },
         sort_keys=True,
         separators=(",", ":"),
         ensure_ascii=False,
@@ -116,8 +120,16 @@ def _make_ro_row(
         "pam": pam,
         "metadata": metadata or {},
         "backbone_ref": {"bucket": "inputs", "path": f"{_FAKE_USER}/{_BACKBONE_ID}/backbone.fasta"},
-        "target_pdb_ref": {"bucket": "inputs", "path": f"{_FAKE_USER}/{_PDB_ID}/7T1B.pdb"} if target_pdb_sha256 else None,
-        "fastq_ref": {"bucket": "inputs", "path": f"{_FAKE_USER}/{_FASTQ_ID}/reads.fastq"} if fastq_sha256 else None,
+        "target_pdb_ref": (
+            {"bucket": "inputs", "path": f"{_FAKE_USER}/{_PDB_ID}/7T1B.pdb"}
+            if target_pdb_sha256
+            else None
+        ),
+        "fastq_ref": (
+            {"bucket": "inputs", "path": f"{_FAKE_USER}/{_FASTQ_ID}/reads.fastq"}
+            if fastq_sha256
+            else None
+        ),
         "created_at": "2026-05-01T00:00:00+00:00",
         "created_by": _FAKE_USER,
     }
@@ -133,13 +145,19 @@ def _mock_fetch_upload(monkeypatch: Any) -> None:
         row = _UPLOAD_DB.get(upload_id)
         if row is None:
             from fastapi import HTTPException
+
             raise HTTPException(422, detail={"code": "upload_not_found", "upload_id": upload_id})
         if row["user_id"] != user_id:
             from fastapi import HTTPException
+
             raise HTTPException(403, detail={"code": "upload_not_owned"})
         if row["kind"] != expected_kind:
             from fastapi import HTTPException
-            raise HTTPException(422, detail={"code": "wrong_upload_kind", "expected": expected_kind, "got": row["kind"]})
+
+            raise HTTPException(
+                422,
+                detail={"code": "wrong_upload_kind", "expected": expected_kind, "got": row["kind"]},
+            )
         return row
 
     monkeypatch.setattr("routers.research_objects._fetch_upload", fake_fetch)
@@ -160,11 +178,13 @@ def test_create_ro_fasta_only(monkeypatch: Any) -> None:
     ch = _expected_hash(_BACKBONE_SHA)
     monkeypatch.setattr(
         "routers.research_objects.service_client",
-        lambda: MagicMock(**{
-            "table.return_value.insert.return_value.execute.return_value.data": [
-                _make_ro_row(ch, _BACKBONE_SHA)
-            ]
-        }),
+        lambda: MagicMock(
+            **{
+                "table.return_value.insert.return_value.execute.return_value.data": [
+                    _make_ro_row(ch, _BACKBONE_SHA)
+                ]
+            }
+        ),
     )
 
     with _client() as c:
@@ -188,12 +208,19 @@ def test_create_ro_with_fastq_and_pdb(monkeypatch: Any) -> None:
     ch = _expected_hash(_BACKBONE_SHA, fastq_sha256=_FASTQ_SHA, target_pdb_sha256=_PDB_SHA)
     monkeypatch.setattr(
         "routers.research_objects.service_client",
-        lambda: MagicMock(**{
-            "table.return_value.insert.return_value.execute.return_value.data": [
-                _make_ro_row(ch, _BACKBONE_SHA, fastq_sha256=_FASTQ_SHA,
-                             target_pdb_sha256=_PDB_SHA, fastq_phred_pass_pct=97.3)
-            ]
-        }),
+        lambda: MagicMock(
+            **{
+                "table.return_value.insert.return_value.execute.return_value.data": [
+                    _make_ro_row(
+                        ch,
+                        _BACKBONE_SHA,
+                        fastq_sha256=_FASTQ_SHA,
+                        target_pdb_sha256=_PDB_SHA,
+                        fastq_phred_pass_pct=97.3,
+                    )
+                ]
+            }
+        ),
     )
 
     with _client() as c:

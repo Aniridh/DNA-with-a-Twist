@@ -17,6 +17,7 @@ Requirements the implementation MUST satisfy (enforced here):
     5. NFC Unicode normalization before serializing
     6. Different inputs → different outputs (no constant-return bugs)
 """
+
 import hashlib
 import unicodedata
 from typing import Any
@@ -27,6 +28,7 @@ import pytest
 # conftest.py puts apps/api on sys.path.
 try:
     from canonical import canonical_json  # type: ignore[import-untyped]
+
     CANONICAL_AVAILABLE = True
 except ImportError:
     CANONICAL_AVAILABLE = False
@@ -40,6 +42,7 @@ pytestmark = pytest.mark.skipif(
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _sha256(data: dict[str, Any]) -> str:
     return hashlib.sha256(canonical_json(data).encode("utf-8")).hexdigest()
@@ -68,6 +71,7 @@ SAMPLE_BUNDLE: dict[str, Any] = {
 # Most critical for detecting hidden entropy sources (datetime.now(), random,
 # object id leakage, dict ordering that varies across Python versions).
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def test_idempotency_100_iterations() -> None:
     """Same dict → byte-identical hash across 100 calls, no hidden entropy."""
@@ -101,6 +105,7 @@ def test_canonical_json_utf8_encodable() -> None:
 # without sort_keys=True will produce different output for different insertion
 # orders. Catch this before the implementation ships.
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def test_top_level_key_order_independence() -> None:
     """Shuffled top-level key insertion order must not change the hash."""
@@ -153,6 +158,7 @@ def test_nested_key_order_independence() -> None:
 # A caller who builds the dict from pretty-printed JSON gets the same hash.
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_output_contains_no_whitespace() -> None:
     """canonical_json must not emit spaces, newlines, or tabs."""
     bundle: dict[str, Any] = {
@@ -166,11 +172,11 @@ def test_output_contains_no_whitespace() -> None:
     # Internal string content ("value with internal spaces") is allowed to have spaces —
     # we check for structural whitespace only (spaces/newlines between JSON tokens).
     import json
+
     reparsed = json.loads(serialized)
     compact = json.dumps(reparsed, sort_keys=True, separators=(",", ":"))
     assert serialized == compact, (
-        "canonical_json output is not compact. "
-        f"Expected: {compact!r}, got: {serialized!r}"
+        f"canonical_json output is not compact. Expected: {compact!r}, got: {serialized!r}"
     )
 
 
@@ -198,6 +204,7 @@ def test_whitespace_in_values_preserved() -> None:
 # If canonical.py doesn't coerce to UTC-Z, two runs on servers in different
 # timezones produce different hashes — silently, visibly only at demo time.
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def test_same_instant_different_offsets_same_hash() -> None:
     """
@@ -293,6 +300,7 @@ def test_naive_datetime_string_not_accepted() -> None:
 # bug in canonical.py (e.g., always returning the same string).
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_different_backbone_different_hash() -> None:
     """Different backbone_sha256 → different content hash."""
     bundle_a: dict[str, Any] = {
@@ -387,6 +395,7 @@ def test_pam_difference_changes_hash() -> None:
 # callers who built the same string via different paths get different hashes.
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_nfc_and_nfd_same_hash() -> None:
     """
     NFC 'café' (U+00E9 é, single codepoint) and
@@ -394,8 +403,8 @@ def test_nfc_and_nfd_same_hash() -> None:
     visually identical but byte-different. canonical.py must normalize to NFC
     so both produce the same hash.
     """
-    nfc_str = unicodedata.normalize("NFC", "café")   # café — composed
-    nfd_str = unicodedata.normalize("NFD", "café")   # cafe + ́  — decomposed
+    nfc_str = unicodedata.normalize("NFC", "café")  # café — composed
+    nfd_str = unicodedata.normalize("NFD", "café")  # cafe + ́  — decomposed
 
     # Verify our test setup is correct: the two strings must differ at bytes.
     assert nfc_str.encode("utf-8") != nfd_str.encode("utf-8"), (
@@ -456,13 +465,12 @@ def test_nfc_output_in_serialized_string() -> None:
 # Backend must expose a compute_ro_hash() or equivalent for this to run fully.
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_sha256_hex_length() -> None:
     """SHA-256 hex output must be exactly 64 characters."""
     h = _sha256(SAMPLE_BUNDLE)
     assert len(h) == 64, f"Expected 64-char hex string, got {len(h)}: {h!r}"
-    assert all(c in "0123456789abcdef" for c in h), (
-        f"Hash contains non-hex characters: {h!r}"
-    )
+    assert all(c in "0123456789abcdef" for c in h), f"Hash contains non-hex characters: {h!r}"
 
 
 def test_hash_is_lowercase_hex() -> None:

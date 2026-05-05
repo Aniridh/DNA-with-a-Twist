@@ -5,6 +5,7 @@ Path setup: inserts apps/api onto sys.path so tests can import
 backend modules directly (e.g. `from canonical import canonical_json`).
 This mirrors the PYTHONPATH=apps/api env var set in CI.
 """
+
 import sys
 from pathlib import Path
 
