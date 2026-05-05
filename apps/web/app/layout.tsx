@@ -17,18 +17,18 @@ const geistMono = localFont({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://cas-ai.app"),
-  title: "DNA with a Twist — Provenance Lab",
+  title: "CasAI — Provenance Lab",
   description: "Verifiable gene-editing research objects and simulation runs.",
   openGraph: {
-    title: "DNA with a Twist — Provenance Lab",
+    title: "CasAI — Provenance Lab",
     description: "Hash, version, and replay every CRISPR experiment. Verifiable by default.",
     url: "https://cas-ai.app",
-    siteName: "DNA with a Twist",
+    siteName: "CasAI",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "DNA with a Twist",
+    title: "CasAI",
     description: "Hash, version, and replay every CRISPR experiment. Verifiable by default.",
   },
 };
