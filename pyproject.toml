@@ -9,8 +9,7 @@ src = ["apps/api", "tests"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "ANN"]
 ignore = [
-    "ANN101",  # missing self type annotation
-    "ANN102",  # missing cls type annotation
+    "ANN401",  # Any permitted in canonical.py _normalize (JSON recursion) and SSE generator
 ]
 
 [tool.ruff.lint.per-file-ignores]
