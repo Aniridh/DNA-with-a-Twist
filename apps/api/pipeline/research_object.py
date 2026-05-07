@@ -8,18 +8,21 @@ Any addition to this set REQUIRES a PR to ARCHITECTURE.md §6 first.
 Excluded by design: id, content_hash itself, created_at, created_by,
 fastq_phred_pass_pct (derived — computed from reads, not an input to the experiment).
 """
+
 from typing import Any
 
 from canonical import sha256_hex
 
 # Exact field names that enter the content_hash. Frozen so callers can verify.
-CONTENT_HASH_FIELDS: frozenset[str] = frozenset({
-    "backbone_sha256",
-    "target_pdb_sha256",
-    "fastq_sha256",
-    "pam",
-    "metadata",
-})
+CONTENT_HASH_FIELDS: frozenset[str] = frozenset(
+    {
+        "backbone_sha256",
+        "target_pdb_sha256",
+        "fastq_sha256",
+        "pam",
+        "metadata",
+    }
+)
 
 
 def build_hash_bundle(

@@ -15,6 +15,7 @@ Usage:
     db = service_client()
     result = db.table("runs").select("*").eq("id", run_id).execute()
 """
+
 import os
 from functools import lru_cache
 

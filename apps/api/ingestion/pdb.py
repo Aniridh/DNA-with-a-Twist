@@ -1,4 +1,5 @@
 """Layer 1 — PDB validation and RCSB fetch."""
+
 import io
 import re
 from dataclasses import dataclass
@@ -22,9 +23,7 @@ def validate_pdb(data: bytes) -> PdbResult:
         from Bio.PDB import PDBParser  # type: ignore[import-untyped]
 
         parser = PDBParser(QUIET=True)
-        parser.get_structure(
-            "s", io.StringIO(data.decode("utf-8", errors="replace"))
-        )
+        parser.get_structure("s", io.StringIO(data.decode("utf-8", errors="replace")))
     except HTTPException:
         raise
     except Exception as exc:

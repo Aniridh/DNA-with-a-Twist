@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { apiClient } from "@/lib/getApiClient";
@@ -26,29 +26,6 @@ function analyzeSequence(raw: string) {
   const gc = (seq.split("").filter((c) => c === "G" || c === "C").length / len) * 100;
   const valid = /^[ATCGN]*$/.test(seq);
   return { len, gc: gc.toFixed(1), valid };
-}
-
-// ── Typed hash reveal ─────────────────────────────────────────────────────────
-
-function HashReveal({ hash }: { hash: string }) {
-  const [revealed, setRevealed] = useState(0);
-
-  useEffect(() => {
-    let i = 0;
-    const interval = setInterval(() => {
-      i++;
-      setRevealed(i);
-      if (i >= hash.length) clearInterval(interval);
-    }, 28);
-    return () => clearInterval(interval);
-  }, [hash]);
-
-  return (
-    <span className="font-mono text-teal text-base sm:text-2xl tracking-wide sm:tracking-wider break-all teal-glow">
-      {hash.slice(0, revealed)}
-      {revealed < hash.length && <span className="animate-pulse opacity-60">_</span>}
-    </span>
-  );
 }
 
 // ── Step indicator ────────────────────────────────────────────────────────────
@@ -108,32 +85,22 @@ export default function NewROPage() {
   const [error, setError] = useState<string | null>(null);
   const [createdRO, setCreatedRO] = useState<ResearchObject | null>(null);
   const [creating, setCreating] = useState(false);
-  const [hash, setHash] = useState<string | null>(null);
 
   const analysis = analyzeSequence(sequence);
-
-  // Compute preview hash when entering confirm step
-  useEffect(() => {
-    if (step === "confirm" && !hash) {
-      computeHash(sequence).then(setHash);
-    }
-  }, [step, sequence, hash]);
 
   async function handleCreate() {
     if (!analysis) return;
     setCreating(true);
     setError(null);
     try {
-      const blob = new Blob([sequence], { type: "text/plain" });
-      const file = new File([blob], "sequence.fasta", { type: "text/plain" });
-      const upload = await apiClient.uploadFile(file);
+      const fastaFile = new File([sequence], "backbone.fasta", { type: "text/plain" });
+      const upload = await apiClient.uploadFile(fastaFile);
       const meta = Object.fromEntries(
         metadata.filter((p) => p.key.trim()).map((p) => [p.key.trim(), p.value.trim()])
       );
       const ro = await apiClient.createResearchObject({
         backbone_upload_id: upload.file_id,
         metadata: meta,
-        _demo_content_hash: hash ?? undefined,
       });
       setCreatedRO(ro);
       setStep("done");
@@ -281,14 +248,12 @@ export default function NewROPage() {
             </div>
 
             <div className="rounded-xl border border-teal/20 bg-teal/5 p-6 text-center space-y-3">
-              <p className="text-xs font-mono text-teal/60 uppercase tracking-widest">SHA-256 preview (not final)</p>
-              {hash ? (
-                <HashReveal hash={hash} />
-              ) : (
-                <p className="font-mono text-teal/40 text-xl animate-pulse">Computing…</p>
-              )}
+              <p className="text-xs font-mono text-teal/60 uppercase tracking-widest">Content hash</p>
+              <p className="font-mono text-teal/50 text-sm">
+                sha256(backbone_sha256 · pam · metadata)
+              </p>
               <p className="text-xs text-muted-foreground max-w-xs mx-auto">
-                Preview of the sequence hash. Server computes the canonical content hash on create.
+                Computed server-side on create. Revealed in the confirmation step.
               </p>
             </div>
 

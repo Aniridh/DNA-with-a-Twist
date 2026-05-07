@@ -12,11 +12,12 @@ HARD RULES — do not violate:
   No datetime.now(), random, uuid4(), or any I/O in this module.
   This module must remain pure and side-effect-free.
 """
+
 import hashlib
 import json
 import re
 import unicodedata
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 # Matches timezone-aware ISO-8601 datetime strings only.
@@ -36,7 +37,7 @@ def _normalize(value: Any) -> Any:
             try:
                 # Python 3.11 handles Z natively; .replace is safe on older builds too.
                 dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
-                dt_utc = dt.astimezone(timezone.utc)
+                dt_utc = dt.astimezone(UTC)
                 ts = dt_utc.strftime("%Y-%m-%dT%H:%M:%S")
                 if dt_utc.microsecond:
                     ts += f".{dt_utc.microsecond:06d}".rstrip("0")

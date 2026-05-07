@@ -1,4 +1,5 @@
 """Layer 1 — FASTA parsing and validation."""
+
 import io
 from dataclasses import dataclass
 

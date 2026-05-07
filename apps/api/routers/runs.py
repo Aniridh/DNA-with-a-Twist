@@ -8,39 +8,23 @@ GET    /runs/{id}/result    — final PredictionPayload
 GET    /runs/{id}/export    — signed download URL for export zip (1h TTL)
 POST   /runs/{id}/replay    — create new run with same RO + prompt
 """
+
 import asyncio
 import json
 from typing import Annotated, Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse, ServerSentEvent  # type: ignore[import-untyped]
 
+from auth import get_current_user_id
 from models.db import service_client
 from pipeline import run as run_pipeline
 
 router = APIRouter(tags=["runs"])
 
 _SSE_PING_INTERVAL = 15.0  # seconds between SSE keepalive pings
-_SSE_POLL_INTERVAL = 0.5   # seconds between DB polls for new events
-
-
-# ── Auth dependency ───────────────────────────────────────────────────────────
-
-
-async def get_current_user_id(authorization: Annotated[str, Header()]) -> str:
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(401, detail={"code": "missing_token"})
-    token = authorization.removeprefix("Bearer ")
-    from models.db import anon_client
-
-    try:
-        resp = anon_client().auth.get_user(token)
-    except Exception as exc:
-        raise HTTPException(401, detail={"code": "invalid_token"}) from exc
-    if resp.user is None:
-        raise HTTPException(401, detail={"code": "invalid_token"})
-    return str(resp.user.id)
+_SSE_POLL_INTERVAL = 0.5  # seconds between DB polls for new events
 
 
 # ── Ownership helpers ─────────────────────────────────────────────────────────
@@ -49,7 +33,14 @@ async def get_current_user_id(authorization: Annotated[str, Header()]) -> str:
 def _verify_run_ownership(run_id: str, user_id: str) -> dict[str, Any]:
     """Fetch run and verify it belongs to user via RO.created_by."""
     try:
-        run_res = service_client().table("runs").select("*, research_objects(created_by)").eq("id", run_id).single().execute()
+        run_res = (
+            service_client()
+            .table("runs")
+            .select("*, research_objects(created_by)")
+            .eq("id", run_id)
+            .single()
+            .execute()
+        )
     except Exception as exc:
         raise HTTPException(502, detail={"code": "db_error", "message": str(exc)}) from exc
     row = run_res.data
@@ -75,15 +66,38 @@ class CreateRunResponse(BaseModel):
     status_url: str
 
 
+class ScoringVersionsOut(BaseModel):
+    pam: str
+    doench_rs2: str
+    cfd: str
+
+
+class RunManifestOut(BaseModel):
+    git_sha: str
+    api_version: str
+    scoring_versions: ScoringVersionsOut
+    started_at: str
+    env_fingerprint: str
+
+
+class ProvenanceEventOut(BaseModel):
+    id: str
+    run_id: str
+    seq: int
+    event_type: str
+    payload: dict[str, Any]
+    created_at: str
+
+
 class RunResponse(BaseModel):
     id: str
     ro_id: str
     prompt: str
     status: str
-    manifest: dict[str, Any] | None
+    manifest: RunManifestOut | None
     created_at: str
     finished_at: str | None
-    recent_events: list[dict[str, Any]]
+    recent_events: list[ProvenanceEventOut]
 
 
 class OffTargetHitOut(BaseModel):
@@ -104,9 +118,15 @@ class GuideCandidateOut(BaseModel):
     bystander_warnings: list[str]
 
 
+class PredictionSummary(BaseModel):
+    guide_count: int
+    top_on_target_score: float
+    mean_off_target_count: float
+
+
 class PredictionPayloadOut(BaseModel):
     guides: list[GuideCandidateOut]
-    summary: dict[str, Any]
+    summary: PredictionSummary
 
 
 class ResultResponse(BaseModel):
@@ -138,7 +158,14 @@ async def create_run(
     """Create a new run for an existing ResearchObject and enqueue the pipeline."""
     # Verify the RO exists and belongs to this user.
     try:
-        ro_res = service_client().table("research_objects").select("id, created_by").eq("id", body.ro_id).single().execute()
+        ro_res = (
+            service_client()
+            .table("research_objects")
+            .select("id, created_by")
+            .eq("id", body.ro_id)
+            .single()
+            .execute()
+        )
     except Exception as exc:
         raise HTTPException(502, detail={"code": "db_error", "message": str(exc)}) from exc
     ro = ro_res.data
@@ -149,9 +176,12 @@ async def create_run(
 
     # Insert run row (status=queued).
     try:
-        run_res = service_client().table("runs").insert(
-            {"ro_id": body.ro_id, "prompt": body.prompt, "status": "queued"}
-        ).execute()
+        run_res = (
+            service_client()
+            .table("runs")
+            .insert({"ro_id": body.ro_id, "prompt": body.prompt, "status": "queued"})
+            .execute()
+        )
     except Exception as exc:
         raise HTTPException(502, detail={"code": "db_error", "message": str(exc)}) from exc
 
@@ -240,12 +270,7 @@ async def stream_events(
 
             # Check run terminal state
             run_status = (
-                db.table("runs")
-                .select("status")
-                .eq("id", run_id)
-                .single()
-                .execute()
-                .data["status"]
+                db.table("runs").select("status").eq("id", run_id).single().execute().data["status"]
             )
             if run_status in ("done", "failed"):
                 # Flush any remaining events before closing
@@ -279,14 +304,7 @@ async def get_result(
     _verify_run_ownership(run_id, user_id)
 
     try:
-        res = (
-            service_client()
-            .table("results")
-            .select("*")
-            .eq("run_id", run_id)
-            .single()
-            .execute()
-        )
+        res = service_client().table("results").select("*").eq("run_id", run_id).single().execute()
     except Exception as exc:
         raise HTTPException(502, detail={"code": "db_error", "message": str(exc)}) from exc
 
@@ -334,8 +352,10 @@ async def get_export_url(
     ttl_seconds = 3600
 
     try:
-        signed = service_client().storage.from_(ref["bucket"]).create_signed_url(
-            ref["path"], ttl_seconds
+        signed = (
+            service_client()
+            .storage.from_(ref["bucket"])
+            .create_signed_url(ref["path"], ttl_seconds)
         )
     except Exception as exc:
         raise HTTPException(502, detail={"code": "storage_error", "message": str(exc)}) from exc
@@ -375,13 +395,18 @@ async def replay_run(
         )
 
     try:
-        new_run_res = service_client().table("runs").insert(
-            {
-                "ro_id": original["ro_id"],
-                "prompt": original["prompt"],
-                "status": "queued",
-            }
-        ).execute()
+        new_run_res = (
+            service_client()
+            .table("runs")
+            .insert(
+                {
+                    "ro_id": original["ro_id"],
+                    "prompt": original["prompt"],
+                    "status": "queued",
+                }
+            )
+            .execute()
+        )
     except Exception as exc:
         raise HTTPException(502, detail={"code": "db_error", "message": str(exc)}) from exc
 

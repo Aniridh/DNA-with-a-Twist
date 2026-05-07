@@ -1,11 +1,11 @@
 """Layer 2 — POST/GET /api/v1/research-objects."""
-from typing import Annotated
-from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from ingestion.storage import StorageRef
+from auth import get_current_user_id
 from models.db import service_client
 from pipeline.research_object import compute_content_hash
 
@@ -42,32 +42,11 @@ class ResearchObjectResponse(BaseModel):
     created_by: str
 
 
-async def get_current_user_id(authorization: Annotated[str, Header()]) -> str:
-    """Verify Supabase JWT, return user UUID string."""
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(401, detail={"code": "missing_token"})
-    token = authorization.removeprefix("Bearer ")
-    from models.db import anon_client
-
-    try:
-        resp = anon_client().auth.get_user(token)
-    except Exception as exc:
-        raise HTTPException(401, detail={"code": "invalid_token"}) from exc
-    if resp.user is None:
-        raise HTTPException(401, detail={"code": "invalid_token"})
-    return str(resp.user.id)
-
-
 def _fetch_upload(upload_id: str, user_id: str, expected_kind: str) -> dict[object, object]:
     """Look up upload record; verify ownership and kind."""
     try:
         result = (
-            service_client()
-            .table("uploads")
-            .select("*")
-            .eq("id", upload_id)
-            .single()
-            .execute()
+            service_client().table("uploads").select("*").eq("id", upload_id).single().execute()
         )
     except Exception as exc:
         raise HTTPException(
@@ -188,7 +167,14 @@ async def get_research_object(
 ) -> ResearchObjectResponse:
     """Fetch a ResearchObject by ID. Only the owner may read it."""
     try:
-        result = service_client().table("research_objects").select("*").eq("id", ro_id).single().execute()
+        result = (
+            service_client()
+            .table("research_objects")
+            .select("*")
+            .eq("id", ro_id)
+            .single()
+            .execute()
+        )
     except Exception as exc:
         raise HTTPException(502, detail={"code": "db_error", "message": str(exc)}) from exc
 

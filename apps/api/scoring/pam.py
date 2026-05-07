@@ -4,6 +4,7 @@ PAM scanner — find all NGG guide candidates on both strands.
 Returns 20nt protospacers (the sequence Cas9 reads) with 0-based position
 on the + strand and strand label. Backbone must contain only A/T/G/C/N.
 """
+
 import re
 from dataclasses import dataclass
 from typing import Literal
@@ -29,9 +30,9 @@ def _revcomp(seq: str) -> str:
 
 @dataclass(frozen=True)
 class PamHit:
-    sequence: str          # 20nt protospacer (5′→3′, as Cas9 reads it)
-    pam: str               # 3nt PAM
-    position: int          # 0-based start of the 20nt on the + strand
+    sequence: str  # 20nt protospacer (5′→3′, as Cas9 reads it)
+    pam: str  # 3nt PAM
+    position: int  # 0-based start of the 20nt on the + strand
     strand: Literal["+", "-"]
 
 
@@ -43,7 +44,7 @@ def scan(backbone: str) -> list[PamHit]:
     hits: list[PamHit] = []
 
     for m in _PLUS_RE.finditer(backbone):
-        full = m.group(1).upper()          # 23nt: guide + PAM
+        full = m.group(1).upper()  # 23nt: guide + PAM
         guide = full[:_GUIDE_LEN]
         pam = full[_GUIDE_LEN:]
         hits.append(PamHit(sequence=guide, pam=pam, position=m.start(), strand="+"))
@@ -52,9 +53,9 @@ def scan(backbone: str) -> list[PamHit]:
         # m.group(2) is the 20nt on + strand; its revcomp is the guide.
         plus_region = m.group(2).upper()
         guide = _revcomp(plus_region)
-        pam_on_plus = m.group(1).upper()[:3]          # CCN on + strand
-        pam = _revcomp(pam_on_plus)                   # NGG on - strand
-        position = m.start() + 3                      # 0-based start of 20nt on +
+        pam_on_plus = m.group(1).upper()[:3]  # CCN on + strand
+        pam = _revcomp(pam_on_plus)  # NGG on - strand
+        position = m.start() + 3  # 0-based start of 20nt on +
         hits.append(PamHit(sequence=guide, pam=pam, position=position, strand="-"))
 
     return hits

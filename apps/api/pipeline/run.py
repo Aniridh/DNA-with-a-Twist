@@ -21,6 +21,7 @@ HARD RULES (ARCHITECTURE.md §6):
   - Guides sorted deterministically before serialisation.
   - prediction.json must be timestamp-free and replay-identical for same RO + prompt.
 """
+
 import hashlib
 import io
 import json
@@ -121,9 +122,9 @@ def execute(run_id: str) -> None:
     try:
         # ── Step 1: transition to running ─────────────────────────────────────
         manifest = _build_manifest(started_at)
-        db.table("runs").update(
-            {"status": "running", "manifest": manifest}
-        ).eq("id", run_id).execute()
+        db.table("runs").update({"status": "running", "manifest": manifest}).eq(
+            "id", run_id
+        ).execute()
 
         # ── Step 2: fetch run + RO ────────────────────────────────────────────
         run_row = db.table("runs").select("*").eq("id", run_id).single().execute().data
@@ -264,7 +265,7 @@ def execute(run_id: str) -> None:
             zf.writestr("events.jsonl", events_jsonl.decode("utf-8"))
 
             # inputs/ — raw uploaded files
-            for label, ref_key in (
+            for _label, ref_key in (
                 ("backbone", "backbone_ref"),
                 ("fastq", "fastq_ref"),
                 ("structure", "target_pdb_ref"),
@@ -314,7 +315,7 @@ def execute(run_id: str) -> None:
             {"status": "done", "finished_at": datetime.now(UTC).isoformat()}
         ).eq("id", run_id).execute()
 
-    except Exception as exc:  # noqa: BLE001
+    except Exception:  # noqa: BLE001 — top-level catch in BackgroundTask; re-raises after status update
         db.table("runs").update(
             {"status": "failed", "finished_at": datetime.now(UTC).isoformat()}
         ).eq("id", run_id).execute()

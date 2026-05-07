@@ -39,20 +39,17 @@ jobs:
           fi
 
       - name: ruff lint
-        run: ruff check apps/api tests || true  # lint-only until api ships; fail hard after first backend PR lands
-        # TODO(reviewer): remove `|| true` once apps/api/pyproject.toml is merged
+        run: ruff check apps/api tests
 
       - name: ruff format check
-        run: ruff format --check apps/api tests || true
-        # TODO(reviewer): remove `|| true` once apps/api/pyproject.toml is merged
+        run: ruff format --check apps/api tests
 
       - name: mypy strict
         run: |
           if [ -d apps/api ]; then
-            mypy apps/api --config-file pyproject.toml || true
+            mypy apps/api --config-file pyproject.toml
           fi
-          mypy tests --config-file pyproject.toml || true
-        # TODO(reviewer): remove `|| true` once apps/api ships typed code
+          mypy tests --config-file pyproject.toml
 
       - name: pytest
         run: |

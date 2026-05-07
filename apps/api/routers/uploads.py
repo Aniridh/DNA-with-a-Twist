@@ -1,15 +1,16 @@
 """Layer 1 — POST /api/v1/uploads."""
+
 import hashlib
-import uuid
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Form, Header, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
+from auth import get_current_user_id
 from ingestion.fasta import validate_fasta
 from ingestion.fastq import validate_fastq
 from ingestion.pdb import fetch_rcsb, validate_pdb
-from ingestion.storage import StorageRef, upload_bytes
+from ingestion.storage import upload_bytes
 
 router = APIRouter(tags=["uploads"])
 
@@ -66,22 +67,6 @@ def _detect_kind(filename: str) -> FileKind:
     )
 
 
-async def get_current_user_id(authorization: Annotated[str, Header()]) -> str:
-    """Verify Supabase JWT, return user UUID string."""
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(401, detail={"code": "missing_token"})
-    token = authorization.removeprefix("Bearer ")
-    from models.db import anon_client  # deferred to avoid import-time env check
-
-    try:
-        resp = anon_client().auth.get_user(token)
-    except Exception as exc:
-        raise HTTPException(401, detail={"code": "invalid_token"}) from exc
-    if resp.user is None:
-        raise HTTPException(401, detail={"code": "invalid_token"})
-    return str(resp.user.id)
-
-
 def _write_upload_record(
     db_row: dict[object, object],
 ) -> None:
@@ -110,7 +95,9 @@ async def upload_file(
     if file is None and pdb_id is None:
         raise HTTPException(422, detail={"code": "no_input", "message": "Provide file or pdb_id"})
     if file is not None and pdb_id is not None:
-        raise HTTPException(422, detail={"code": "ambiguous_input", "message": "Provide file or pdb_id, not both"})
+        raise HTTPException(
+            422, detail={"code": "ambiguous_input", "message": "Provide file or pdb_id, not both"}
+        )
 
     phred_pass_pct: float | None = None
     sequence_count: int | None = None

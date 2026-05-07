@@ -1,4 +1,5 @@
 """Layer 1 — FASTQ parsing and PHRED Q20 gate."""
+
 import io
 from dataclasses import dataclass
 

@@ -11,6 +11,7 @@ HARD RULES (ARCHITECTURE.md §6):
   - No datetime, uuid4, random, or file I/O in this module.
   - Output must be identical for identical input — always.
 """
+
 import math
 import re
 from typing import Final
