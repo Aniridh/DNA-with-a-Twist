@@ -421,7 +421,7 @@ function FailedSection({ fixture }: { fixture: ExampleFixture }) {
 
       <Section title="Browse Other Examples">
         <p className="text-xs text-muted-foreground mb-4">
-          This failure example demonstrates how DNA with a Twist handles invalid inputs gracefully.
+          This failure example demonstrates how CasAI handles invalid inputs gracefully.
           Try one of the successful examples to see guide scoring and provenance in action.
         </p>
         <Link

@@ -5,7 +5,7 @@ export function Footer() {
     <footer className="border-t border-[#222] bg-[#0a0a0a] py-16 px-6">
       <div className="mx-auto max-w-6xl flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="space-y-1 text-center md:text-left">
-          <p className="text-sm font-semibold text-foreground">DNA with a Twist</p>
+          <p className="text-sm font-semibold text-foreground">CasAI</p>
           <p className="text-xs text-muted-foreground">Provenance-first gene simulation</p>
         </div>
 
@@ -16,7 +16,7 @@ export function Footer() {
           >
             Try the demo
           </Link>
-          <p className="text-[11px] text-muted-foreground/50">MVP demo — backend in development</p>
+          <p className="text-[11px] text-muted-foreground/50">Open beta · mock data, real cryptography</p>
         </div>
       </div>
     </footer>

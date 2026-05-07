@@ -27,7 +27,7 @@ export function LandingNav() {
       <div className="mx-auto max-w-6xl px-6 flex h-16 items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5 group">
           <span className="text-[15px] font-semibold tracking-tight text-foreground group-hover:text-teal transition-colors duration-200">
-            DNA with a Twist
+            CasAI
           </span>
           <span className="hidden sm:inline text-xs text-muted-foreground font-mono">
             Provenance Lab

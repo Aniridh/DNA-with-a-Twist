@@ -63,7 +63,7 @@ export default function LoginPage() {
         <div className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(ellipse 60% 50% at 30% 60%, rgba(94,234,212,0.06) 0%, transparent 70%)" }} />
 
         <div className="relative">
-          <span className="text-sm font-semibold text-foreground">DNA with a Twist</span>
+          <span className="text-sm font-semibold text-foreground">CasAI</span>
         </div>
 
         <div className="relative space-y-8">
@@ -99,7 +99,7 @@ export default function LoginPage() {
         <div className="w-full max-w-sm space-y-8">
           {/* Mobile logo */}
           <div className="lg:hidden text-center">
-            <p className="text-lg font-semibold text-foreground">DNA with a Twist</p>
+            <p className="text-lg font-semibold text-foreground">CasAI</p>
             <p className="text-sm text-muted-foreground">Provenance Lab</p>
           </div>
 

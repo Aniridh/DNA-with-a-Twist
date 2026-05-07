@@ -30,7 +30,7 @@ const COMPETITORS: { name: string; marks: Mark[] }[] = [
     marks: ["no", "no", "no", "partial", "no", "no", "no", "no"],
   },
   {
-    name: "DNA with a Twist",
+    name: "CasAI",
     marks: ["yes", "yes", "yes", "yes", "yes", "yes", "yes", "yes"],
   },
 ];
@@ -88,7 +88,7 @@ export function WhyWeWin() {
               <p className="text-sm font-medium text-foreground mb-3">{feature}</p>
               <div className="grid grid-cols-2 gap-2">
                 {COMPETITORS.map((c) => {
-                  const isUs = c.name === "DNA with a Twist";
+                  const isUs = c.name === "CasAI";
                   return (
                     <div
                       key={c.name}
@@ -119,7 +119,7 @@ export function WhyWeWin() {
               <tr className="border-b border-[#222]">
                 <th className="w-48 px-6 py-4 text-left text-sm text-muted-foreground font-medium">Feature</th>
                 {COMPETITORS.map((c) => {
-                  const isUs = c.name === "DNA with a Twist";
+                  const isUs = c.name === "CasAI";
                   return (
                     <th
                       key={c.name}
@@ -141,7 +141,7 @@ export function WhyWeWin() {
                 <tr key={feature} className="hover:bg-[#111]/50 transition-colors">
                   <td className="px-6 py-3.5 text-sm text-muted-foreground">{feature}</td>
                   {COMPETITORS.map((c) => {
-                    const isUs = c.name === "DNA with a Twist";
+                    const isUs = c.name === "CasAI";
                     return (
                       <td
                         key={c.name}

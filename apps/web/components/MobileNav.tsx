@@ -41,7 +41,7 @@ export function MobileHeader() {
   return (
     <header className="md:hidden flex h-12 shrink-0 items-center justify-between border-b border-[#222] bg-surface px-4">
       <Link href="/" className="text-sm font-semibold text-foreground">
-        DNA with a Twist
+        CasAI
       </Link>
       <span className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-wider">Demo</span>
     </header>

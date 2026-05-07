@@ -33,7 +33,7 @@ export function NavBar({ userEmail }: NavBarProps) {
           href="/dashboard"
           className="flex items-center gap-2 hover:opacity-80 transition-opacity"
         >
-          <span className="font-bold text-lg tracking-tight">DNA with a Twist</span>
+          <span className="font-bold text-lg tracking-tight">CasAI</span>
           <span className="text-xs text-muted-foreground font-mono">Provenance Lab</span>
         </Link>
 

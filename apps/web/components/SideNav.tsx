@@ -46,7 +46,7 @@ export function SideNav() {
       <div className="flex h-14 items-center px-5 border-b border-[#222]">
         <Link href="/" className="flex items-center gap-2 group">
           <span className="text-sm font-semibold text-foreground group-hover:text-teal transition-colors">
-            DNA with a Twist
+            CasAI
           </span>
         </Link>
       </div>

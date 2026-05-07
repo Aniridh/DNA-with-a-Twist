@@ -9,7 +9,7 @@ export default function ExamplesLayout({ children }: { children: React.ReactNode
         <div className="container mx-auto px-4 max-w-6xl flex h-14 items-center justify-between">
           <div className="flex items-center gap-4">
             <Link href="/" className="font-bold text-lg tracking-tight hover:opacity-80 transition-opacity">
-              DNA with a Twist
+              CasAI
             </Link>
             <span className="text-muted-foreground text-xs font-mono">Provenance Lab</span>
             <span className="text-muted-foreground/40 text-xs">›</span>
