@@ -325,7 +325,6 @@ export const mockApiClient: ApiClient = {
     }, null, 2));
 
     zip.file("prediction.json", JSON.stringify({
-      run_id: runId,
       guides: MOCK_GUIDES,
       summary: { top_score: 0.87, mean_off_target: 4.6, guides_found: 5 },
     }, null, 2));

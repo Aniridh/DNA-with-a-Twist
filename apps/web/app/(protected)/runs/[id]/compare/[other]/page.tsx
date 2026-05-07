@@ -6,9 +6,18 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { apiClient } from "@/lib/getApiClient";
-import type { Run } from "@/lib/types";
+import type { Result, Run } from "@/lib/types";
 
 type Verdict = "checking" | "match" | "mismatch";
+
+function predictionsMatch(a: Result, b: Result): boolean {
+  if (a.export_pack_sha256 && b.export_pack_sha256) {
+    return a.export_pack_sha256 === b.export_pack_sha256;
+  }
+  // Fall back to guide sequence comparison when export sha is unavailable
+  const guides = (r: Result) => r.prediction.guides.map((g) => g.sequence).join(",");
+  return guides(a) === guides(b);
+}
 
 export default function ComparePage() {
   const { id, other } = useParams<{ id: string; other: string }>();
@@ -19,17 +28,22 @@ export default function ComparePage() {
   const [checkPhase, setCheckPhase] = useState(0);
 
   useEffect(() => {
-    Promise.all([apiClient.getRun(id), apiClient.getRun(other)]).then(([a, b]) => {
+    Promise.all([
+      apiClient.getRun(id),
+      apiClient.getRun(other),
+      apiClient.getResult(id),
+      apiClient.getResult(other),
+    ]).then(([a, b, resultA, resultB]) => {
       setRunA(a);
       setRunB(b);
-      // Phase 0 → 1 → 2 → verdict
       setTimeout(() => setCheckPhase(1), 600);
       setTimeout(() => setCheckPhase(2), 1200);
       setTimeout(() => {
-        const match =
+        const manifestMatch =
           a.manifest?.env_fingerprint === b.manifest?.env_fingerprint &&
           a.manifest?.git_sha === b.manifest?.git_sha;
-        setVerdict(match ? "match" : "mismatch");
+        const predictionMatch = predictionsMatch(resultA, resultB);
+        setVerdict(manifestMatch && predictionMatch ? "match" : "mismatch");
       }, 1800);
     });
   }, [id, other]);
@@ -67,7 +81,6 @@ export default function ComparePage() {
               transition={{ duration: 0.3 }}
               className="flex flex-col items-center gap-6"
             >
-              {/* Animated rings */}
               <div className="relative flex items-center justify-center">
                 <motion.div
                   animate={{ rotate: 360 }}
@@ -84,9 +97,9 @@ export default function ComparePage() {
                 </div>
               </div>
               <div className="space-y-1 text-center">
-                <p className="text-sm text-muted-foreground">Comparing manifests</p>
+                <p className="text-sm text-muted-foreground">Comparing runs</p>
                 <div className="flex gap-1.5 justify-center">
-                  {["Env fingerprint", "Git SHA", "Content hash"].map((label, i) => (
+                  {["Env fingerprint", "Git SHA", "Prediction SHA"].map((label, i) => (
                     <motion.span
                       key={label}
                       initial={{ opacity: 0.2 }}
@@ -113,7 +126,6 @@ export default function ComparePage() {
               transition={{ duration: 0.6, ease: [0, 0, 0.2, 1] }}
               className="flex flex-col items-center gap-6"
             >
-              {/* Pulse rings on success */}
               <div className="relative flex items-center justify-center">
                 <motion.div
                   initial={{ scale: 0.6, opacity: 0.8 }}
@@ -181,7 +193,7 @@ export default function ComparePage() {
               </div>
               <div className="text-center space-y-1">
                 <p className="text-2xl font-semibold text-red-400">Mismatch detected</p>
-                <p className="text-sm text-muted-foreground">Environment fingerprints diverged</p>
+                <p className="text-sm text-muted-foreground">Outputs diverged between runs</p>
               </div>
             </motion.div>
           )}

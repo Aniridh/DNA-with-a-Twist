@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { apiClient } from "@/lib/getApiClient";
@@ -16,15 +16,6 @@ GCAGCCTGCAGGCAGAGACCTGTCCCCAGAGCCTGGGAATGTGGTGGGAGAACAGATGGAGAGCAGGAGC
 CACAGATCCCAGCCATCCTGGAAGGAGGCAGCCTGCAGGCAGAGACCTGTCCCCAGAGCCTGGGAATGTG
 GTGGGAGAACAGAGGAGAGCAGGAGCCACAGATCCCAGCCATCCTGGAAGGAGGCAGCCTGCAGGCAGAG
 ACCTGTCCCCAGAGCCTGGGAATGTGGTGGGAGAACAGAGGAGAGCAGGAG`;
-
-// ── SHA-256 ───────────────────────────────────────────────────────────────────
-
-async function computeHash(seq: string): Promise<string> {
-  const canonical = seq.replace(/^>.*$/gm, "").replace(/\s+/g, "").toUpperCase();
-  const buf = new TextEncoder().encode(canonical);
-  const hash = await crypto.subtle.digest("SHA-256", buf);
-  return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, "0")).join("");
-}
 
 // ── Sequence analysis ─────────────────────────────────────────────────────────
 
@@ -42,7 +33,7 @@ function analyzeSequence(raw: string) {
 function HashReveal({ hash }: { hash: string }) {
   const [revealed, setRevealed] = useState(0);
 
-  useState(() => {
+  useEffect(() => {
     let i = 0;
     const interval = setInterval(() => {
       i++;
@@ -50,7 +41,7 @@ function HashReveal({ hash }: { hash: string }) {
       if (i >= hash.length) clearInterval(interval);
     }, 28);
     return () => clearInterval(interval);
-  });
+  }, [hash]);
 
   return (
     <span className="font-mono text-teal text-base sm:text-2xl tracking-wide sm:tracking-wider break-all teal-glow">
@@ -121,20 +112,28 @@ export default function NewROPage() {
 
   const analysis = analyzeSequence(sequence);
 
+  // Compute preview hash when entering confirm step
+  useEffect(() => {
+    if (step === "confirm" && !hash) {
+      computeHash(sequence).then(setHash);
+    }
+  }, [step, sequence, hash]);
+
   async function handleCreate() {
     if (!analysis) return;
     setCreating(true);
     setError(null);
     try {
-      const h = await computeHash(sequence);
-      setHash(h);
+      const blob = new Blob([sequence], { type: "text/plain" });
+      const file = new File([blob], "sequence.fasta", { type: "text/plain" });
+      const upload = await apiClient.uploadFile(file);
       const meta = Object.fromEntries(
         metadata.filter((p) => p.key.trim()).map((p) => [p.key.trim(), p.value.trim()])
       );
       const ro = await apiClient.createResearchObject({
-        backbone_upload_id: "demo",
+        backbone_upload_id: upload.file_id,
         metadata: meta,
-        _demo_content_hash: h,
+        _demo_content_hash: hash ?? undefined,
       });
       setCreatedRO(ro);
       setStep("done");
@@ -282,14 +281,14 @@ export default function NewROPage() {
             </div>
 
             <div className="rounded-xl border border-teal/20 bg-teal/5 p-6 text-center space-y-3">
-              <p className="text-xs font-mono text-teal/60 uppercase tracking-widest">SHA-256 content hash</p>
+              <p className="text-xs font-mono text-teal/60 uppercase tracking-widest">SHA-256 preview (not final)</p>
               {hash ? (
                 <HashReveal hash={hash} />
               ) : (
                 <p className="font-mono text-teal/40 text-xl animate-pulse">Computing…</p>
               )}
               <p className="text-xs text-muted-foreground max-w-xs mx-auto">
-                Covers backbone sequence, PAM, and all metadata. Anyone with this hash can verify your inputs.
+                Preview of the sequence hash. Server computes the canonical content hash on create.
               </p>
             </div>
 

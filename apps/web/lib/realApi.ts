@@ -5,6 +5,7 @@ import type {
   CreateRunRequest,
   CreateRunResponse,
   ExportResponse,
+  ProvenanceEvent,
   ReplayResponse,
   Result,
   Run,
@@ -52,9 +53,16 @@ export const realApiClient: ApiClient = {
   },
 
   createResearchObject(req: CreateRORequest): Promise<ResearchObject> {
+    // Map frontend field names → backend API field names
+    const { backbone_upload_id, fastq_upload_id, pdb_upload_id, _demo_content_hash: _ignored, ...rest } = req;
     return apiFetch("/api/v1/research-objects", {
       method: "POST",
-      body: JSON.stringify(req),
+      body: JSON.stringify({
+        ...rest,
+        backbone_id: backbone_upload_id,
+        ...(fastq_upload_id != null && { fastq_id: fastq_upload_id }),
+        ...(pdb_upload_id != null && { pdb_id: pdb_upload_id }),
+      }),
     });
   },
 
@@ -63,7 +71,10 @@ export const realApiClient: ApiClient = {
   },
 
   listResearchObjects(): Promise<ResearchObject[]> {
-    return apiFetch("/api/v1/research-objects");
+    return apiFetch<ResearchObject[]>("/api/v1/research-objects").catch((e: unknown) => {
+      if (e instanceof Error && e.message.includes("404")) return [];
+      throw e;
+    });
   },
 
   createRun(req: CreateRunRequest): Promise<CreateRunResponse> {
@@ -79,7 +90,10 @@ export const realApiClient: ApiClient = {
   },
 
   listRuns(): Promise<Run[]> {
-    return apiFetch("/api/v1/runs");
+    return apiFetch<Run[]>("/api/v1/runs").catch((e: unknown) => {
+      if (e instanceof Error && e.message.includes("404")) return [];
+      throw e;
+    });
   },
 
   getResult(runId: string): Promise<Result> {
@@ -94,7 +108,53 @@ export const realApiClient: ApiClient = {
     return apiFetch(`/api/v1/runs/${runId}/replay`, { method: "POST" });
   },
 
-  streamRunEvents(runId: string): EventSource | MockEventStream {
-    return new EventSource(`${BASE}/api/v1/runs/${runId}/events`);
+  streamRunEvents(runId: string): MockEventStream {
+    return {
+      isMock: true as const,
+      subscribe(
+        onEvent: (event: ProvenanceEvent) => void,
+        onDone: () => void
+      ): () => void {
+        const controller = new AbortController();
+
+        void (async () => {
+          try {
+            const token = await getAuthToken();
+            const res = await fetch(`${BASE}/api/v1/runs/${runId}/events`, {
+              headers: { Authorization: `Bearer ${token}` },
+              signal: controller.signal,
+            });
+
+            if (!res.ok || !res.body) { onDone(); return; }
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let buf = "";
+
+            for (;;) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              buf += decoder.decode(value, { stream: true });
+              const lines = buf.split("\n");
+              buf = lines.pop() ?? "";
+              for (const line of lines) {
+                if (line.startsWith("data:")) {
+                  const raw = line.slice(5).trim();
+                  if (raw) {
+                    try { onEvent(JSON.parse(raw) as ProvenanceEvent); }
+                    catch { /* malformed event — skip */ }
+                  }
+                }
+              }
+            }
+            onDone();
+          } catch (err) {
+            if (!(err instanceof DOMException && err.name === "AbortError")) onDone();
+          }
+        })();
+
+        return () => controller.abort();
+      },
+    };
   },
 };
